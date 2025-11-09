@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: melodyhub
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/melodyhub
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+
+  # MongoDB configuration (será usado posteriormente)
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/melodyhub
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
