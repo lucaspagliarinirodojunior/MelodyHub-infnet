@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.js.translate.context.Namer.kotlin
+
 plugins {
     kotlin("jvm") version "1.9.25"
     kotlin("plugin.spring") version "1.9.25"

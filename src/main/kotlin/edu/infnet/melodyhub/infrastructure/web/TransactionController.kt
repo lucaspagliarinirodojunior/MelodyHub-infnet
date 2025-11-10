@@ -50,7 +50,3 @@ class TransactionController(
             .body(ErrorResponse(ex.message ?: "Invalid request"))
     }
 }
-
-data class ErrorResponse(
-    val message: String
-)

@@ -55,5 +55,3 @@ class UserController(
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse(ex.message ?: "Recurso não encontrado"))
     }
 }
-
-data class ErrorResponse(val message: String)

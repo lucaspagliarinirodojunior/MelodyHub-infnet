@@ -38,7 +38,7 @@ class TransactionService(
         val fraudCheckResult = antiFraudService.validateTransaction(transaction)
 
         if (!fraudCheckResult.isValid) {
-            transaction.reject(fraudCheckResult.reason)
+            transaction.reject(fraudCheckResult.reason ?: "Validação de antifraude falhou")
         } else {
             transaction.approve()
         }
