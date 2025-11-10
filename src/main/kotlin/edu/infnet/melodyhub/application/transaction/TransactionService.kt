@@ -41,12 +41,30 @@ class TransactionService(
             transaction.reject(fraudCheckResult.reason ?: "Validação de antifraude falhou")
         } else {
             transaction.approve()
+
+            // Atualizar role do usuário baseado no plano
+            updateUserRoleBasedOnSubscription(user, request.subscriptionType)
         }
 
         // Salvar transação
         val savedTransaction = transactionRepository.save(transaction)
 
         return TransactionResponse.from(savedTransaction)
+    }
+
+    private fun updateUserRoleBasedOnSubscription(
+        user: edu.infnet.melodyhub.domain.user.User,
+        subscriptionType: edu.infnet.melodyhub.domain.transaction.SubscriptionType
+    ) {
+        val newRole = when (subscriptionType) {
+            edu.infnet.melodyhub.domain.transaction.SubscriptionType.BASIC ->
+                edu.infnet.melodyhub.domain.user.UserRole.BASIC
+            edu.infnet.melodyhub.domain.transaction.SubscriptionType.PREMIUM ->
+                edu.infnet.melodyhub.domain.user.UserRole.PREMIUM
+        }
+
+        user.updateRole(newRole)
+        userRepository.save(user)
     }
 
     fun getTransactionById(id: UUID): TransactionResponse {

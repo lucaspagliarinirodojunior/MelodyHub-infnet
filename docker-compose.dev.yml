@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: melodyhub-postgres-dev
+    environment:
+      POSTGRES_DB: melodyhub
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - melodyhub-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: melodyhub-app-dev
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/melodyhub
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      # Montar código fonte para hot reload
+      - ./src:/app/src
+      - ./build.gradle.kts:/app/build.gradle.kts
+      - ./settings.gradle.kts:/app/settings.gradle.kts
+      # Cache do Gradle para não recompilar tudo
+      - gradle-cache:/home/gradle/.gradle
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - melodyhub-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data_dev:
+    driver: local
+  gradle-cache:
+    driver: local
+
+networks:
+  melodyhub-network:
+    driver: bridge

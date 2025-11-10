@@ -1,0 +1,19 @@
+FROM gradle:8.14.3-jdk17
+WORKDIR /app
+
+# Copy gradle files for dependency caching
+COPY build.gradle.kts settings.gradle.kts ./
+COPY gradle ./gradle
+
+# Download dependencies
+RUN gradle dependencies --no-daemon || true
+
+# Expose port
+EXPOSE 8080
+
+# Set development environment
+ENV SPRING_PROFILES_ACTIVE=default
+ENV SPRING_DEVTOOLS_RESTART_ENABLED=true
+
+# Run application with continuous build
+CMD ["gradle", "bootRun", "--no-daemon", "--continuous"]

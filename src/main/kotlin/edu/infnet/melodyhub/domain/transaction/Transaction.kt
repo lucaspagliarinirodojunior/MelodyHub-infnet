@@ -59,8 +59,7 @@ class Transaction(
 
 enum class SubscriptionType(val monthlyPrice: BigDecimal) {
     BASIC(BigDecimal("9.90")),
-    PREMIUM(BigDecimal("19.90")),
-    FAMILY(BigDecimal("29.90"))
+    PREMIUM(BigDecimal("19.90"))
 }
 
 enum class TransactionStatus {

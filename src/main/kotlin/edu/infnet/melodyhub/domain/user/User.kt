@@ -22,6 +22,14 @@ class User(
     @Column(nullable = false, unique = true)
     var email: String,
 
+    @field:NotBlank(message = "Senha é obrigatória")
+    @Column(nullable = false)
+    var password: String,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    var role: UserRole = UserRole.SEM_PLANO,
+
     @Column(nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),
 
@@ -42,6 +50,16 @@ class User(
         this.email = newEmail
         this.updatedAt = LocalDateTime.now()
     }
+
+    fun updateRole(newRole: UserRole) {
+        this.role = newRole
+        this.updatedAt = LocalDateTime.now()
+    }
+
+    fun isAdmin(): Boolean = role == UserRole.ADMIN
+    fun hasPremiumAccess(): Boolean = role == UserRole.PREMIUM || role == UserRole.ADMIN
+    fun hasBasicAccess(): Boolean = role == UserRole.BASIC || hasPremiumAccess()
+    fun hasNoPlan(): Boolean = role == UserRole.SEM_PLANO
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

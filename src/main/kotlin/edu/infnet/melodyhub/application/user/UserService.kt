@@ -4,6 +4,7 @@ import edu.infnet.melodyhub.application.user.dto.CreateUserRequest
 import edu.infnet.melodyhub.application.user.dto.UserResponse
 import edu.infnet.melodyhub.domain.user.User
 import edu.infnet.melodyhub.domain.user.UserRepository
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -12,6 +13,7 @@ import java.util.UUID
 class UserService(
     private val userRepository: UserRepository
 ) {
+    private val passwordEncoder = BCryptPasswordEncoder()
 
     @Transactional
     fun createUser(request: CreateUserRequest): UserResponse {
@@ -22,7 +24,9 @@ class UserService(
 
         val user = User(
             name = request.name,
-            email = request.email
+            email = request.email,
+            password = passwordEncoder.encode(request.password),
+            role = request.role ?: edu.infnet.melodyhub.domain.user.UserRole.SEM_PLANO
         )
 
         val savedUser = userRepository.save(user)

@@ -1,0 +1,313 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-11-10T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_melodyhub",
+      "_type": "workspace",
+      "name": "MelodyHub API",
+      "description": "API do MelodyHub - Sistema de gerenciamento de assinaturas musicais",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "user_id": "",
+        "transaction_id": "",
+        "auth_token": ""
+      },
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "folder_auth",
+      "_type": "request_group",
+      "name": "🔐 Authentication",
+      "description": "Endpoints de autenticação",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_login",
+      "_type": "request",
+      "name": "Login",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"lucas@example.com\",\n  \"password\": \"minhasenha123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Faz login e retorna um token JWT com a role do usuário. Copie o token retornado e cole na variável auth_token do environment.",
+      "parentId": "folder_auth"
+    },
+    {
+      "_id": "req_me",
+      "_type": "request",
+      "name": "Me - Ver meu plano",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/me",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "Retorna os dados do usuário logado (userId, name, email, role) baseado no token JWT. Use este endpoint para ver qual plano você está!",
+      "parentId": "folder_auth"
+    },
+    {
+      "_id": "folder_users",
+      "_type": "request_group",
+      "name": "Users",
+      "description": "Endpoints de gerenciamento de usuários",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_create_user",
+      "_type": "request",
+      "name": "Create User",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/users",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao.silva@example.com\",\n  \"password\": \"senha123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria um novo usuário com nome, email e senha. Role padrão: SEM_PLANO. Roles disponíveis: ADMIN, PREMIUM, BASIC, SEM_PLANO",
+      "parentId": "folder_users"
+    },
+    {
+      "_id": "req_get_all_users",
+      "_type": "request",
+      "name": "Get All Users",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/users",
+      "headers": [],
+      "description": "Lista todos os usuários cadastrados",
+      "parentId": "folder_users"
+    },
+    {
+      "_id": "req_get_user_by_id",
+      "_type": "request",
+      "name": "Get User by ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/users/{{ _.user_id }}",
+      "headers": [],
+      "description": "Busca um usuário específico pelo ID (UUID). Configure user_id no environment.",
+      "parentId": "folder_users"
+    },
+    {
+      "_id": "req_get_user_by_email",
+      "_type": "request",
+      "name": "Get User by Email",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/users/email/joao.silva@example.com",
+      "headers": [],
+      "description": "Busca um usuário pelo email",
+      "parentId": "folder_users"
+    },
+    {
+      "_id": "req_delete_user",
+      "_type": "request",
+      "name": "Delete User",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/users/{{ _.user_id }}",
+      "headers": [],
+      "description": "Remove um usuário pelo ID (UUID). Configure user_id no environment.",
+      "parentId": "folder_users"
+    },
+    {
+      "_id": "folder_transactions",
+      "_type": "request_group",
+      "name": "Transactions",
+      "description": "Endpoints de gerenciamento de transações/assinaturas",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_create_transaction_basic",
+      "_type": "request",
+      "name": "Create Transaction - BASIC",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/transactions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"BASIC\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria uma transação BASIC (R$ 9.90/mês). Valida regras de antifraude automaticamente. Se aprovada, atualiza role do usuário para BASIC.",
+      "parentId": "folder_transactions"
+    },
+    {
+      "_id": "req_create_transaction_premium",
+      "_type": "request",
+      "name": "Create Transaction - PREMIUM",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/transactions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"PREMIUM\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria uma transação PREMIUM (R$ 19.90/mês). Valida regras de antifraude automaticamente. Se aprovada, atualiza role do usuário para PREMIUM.",
+      "parentId": "folder_transactions"
+    },
+    {
+      "_id": "req_get_all_transactions",
+      "_type": "request",
+      "name": "Get All Transactions",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/transactions",
+      "headers": [],
+      "description": "Lista todas as transações cadastradas",
+      "parentId": "folder_transactions"
+    },
+    {
+      "_id": "req_get_transaction_by_id",
+      "_type": "request",
+      "name": "Get Transaction by ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/transactions/{{ _.transaction_id }}",
+      "headers": [],
+      "description": "Busca uma transação específica pelo ID (UUID). Configure transaction_id no environment.",
+      "parentId": "folder_transactions"
+    },
+    {
+      "_id": "req_get_transactions_by_user",
+      "_type": "request",
+      "name": "Get Transactions by User",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/transactions/user/{{ _.user_id }}",
+      "headers": [],
+      "description": "Lista todas as transações de um usuário específico. Configure user_id no environment.",
+      "parentId": "folder_transactions"
+    },
+    {
+      "_id": "folder_examples",
+      "_type": "request_group",
+      "name": "📋 Example Flow",
+      "description": "Fluxo de exemplo completo",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_example_1_create_user",
+      "_type": "request",
+      "name": "1. Create User",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/users",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Maria Santos\",\n  \"email\": \"maria.santos@example.com\",\n  \"password\": \"minhasenha123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "1️⃣ Criar usuário e copiar o ID retornado para o environment",
+      "parentId": "folder_examples"
+    },
+    {
+      "_id": "req_example_2_create_transaction",
+      "_type": "request",
+      "name": "2. Create Transaction",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/transactions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"PREMIUM\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "2️⃣ Criar transação usando o user_id do passo anterior",
+      "parentId": "folder_examples"
+    },
+    {
+      "_id": "req_example_3_login",
+      "_type": "request",
+      "name": "3. Login",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"maria.santos@example.com\",\n  \"password\": \"minhasenha123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "3️⃣ Fazer login e copiar o token retornado para a variável auth_token",
+      "parentId": "folder_examples"
+    },
+    {
+      "_id": "req_example_4_check_plan",
+      "_type": "request",
+      "name": "4. Check My Plan (usando token)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/me",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "4️⃣ Ver qual plano está ativo (role: SEM_PLANO). Usa apenas o token!",
+      "parentId": "folder_examples"
+    },
+    {
+      "_id": "req_example_5_get_user_transactions",
+      "_type": "request",
+      "name": "5. Get User Transactions",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/transactions/user/{{ _.user_id }}",
+      "headers": [],
+      "description": "5️⃣ Listar todas as transações do usuário",
+      "parentId": "folder_examples"
+    },
+    {
+      "_id": "req_example_6_check_plan_after",
+      "_type": "request",
+      "name": "6. Check My Plan Again (agora com PREMIUM)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/me",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "6️⃣ Ver o plano atualizado (role: PREMIUM). Automaticamente mudou após transação aprovada!",
+      "parentId": "folder_examples"
+    }
+  ]
+}

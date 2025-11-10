@@ -1,6 +1,7 @@
 package edu.infnet.melodyhub.application.user.dto
 
 import edu.infnet.melodyhub.domain.user.User
+import edu.infnet.melodyhub.domain.user.UserRole
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -8,6 +9,7 @@ data class UserResponse(
     val id: UUID?,
     val name: String,
     val email: String,
+    val role: UserRole,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
 ) {
@@ -17,6 +19,7 @@ data class UserResponse(
                 id = user.id,
                 name = user.name,
                 email = user.email,
+                role = user.role,
                 createdAt = user.createdAt,
                 updatedAt = user.updatedAt
             )
