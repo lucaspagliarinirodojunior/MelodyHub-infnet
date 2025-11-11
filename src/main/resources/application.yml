@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 200MB
   application:
     name: melodyhub
 
@@ -18,10 +22,9 @@ spring:
         format_sql: true
     open-in-view: false
 
-  # MongoDB configuration (será usado posteriormente)
   data:
     mongodb:
-      uri: mongodb://localhost:27017/melodyhub
+      uri: mongodb://localhost:27017/melodyhub-files
 
 server:
   port: 8080

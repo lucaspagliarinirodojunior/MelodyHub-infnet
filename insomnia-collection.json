@@ -19,7 +19,8 @@
         "base_url": "http://localhost:8080",
         "user_id": "",
         "transaction_id": "",
-        "auth_token": ""
+        "auth_token": "",
+        "music_id": ""
       },
       "parentId": "wrk_melodyhub"
     },
@@ -46,8 +47,9 @@
           "value": "application/json"
         }
       ],
-      "description": "Faz login e retorna um token JWT com a role do usuário. Copie o token retornado e cole na variável auth_token do environment.",
-      "parentId": "folder_auth"
+      "description": "Faz login e retorna um token JWT com a role do usuário. O token é automaticamente salvo na variável auth_token do environment.",
+      "parentId": "folder_auth",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.token) {\n  insomnia.environment.set('auth_token', body.token);\n  if (body.userId) {\n    insomnia.environment.set('user_id', body.userId);\n  }\n  console.log('✅ Token salvo automaticamente!');\n} else {\n  console.log('❌ Falha ao obter token');\n}"
     },
     {
       "_id": "req_me",
@@ -87,8 +89,9 @@
           "value": "application/json"
         }
       ],
-      "description": "Cria um novo usuário com nome, email e senha. Role padrão: SEM_PLANO. Roles disponíveis: ADMIN, PREMIUM, BASIC, SEM_PLANO",
-      "parentId": "folder_users"
+      "description": "Cria um novo usuário com nome, email e senha. O user_id é automaticamente salvo no environment. Role padrão: SEM_PLANO.",
+      "parentId": "folder_users",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('user_id', body.id);\n  console.log('✅ User ID salvo automaticamente:', body.id);\n} else {\n  console.log('❌ Falha ao obter user_id');\n}"
     },
     {
       "_id": "req_get_all_users",
@@ -153,8 +156,9 @@
           "value": "application/json"
         }
       ],
-      "description": "Cria uma transação BASIC (R$ 9.90/mês). Valida regras de antifraude automaticamente. Se aprovada, atualiza role do usuário para BASIC.",
-      "parentId": "folder_transactions"
+      "description": "Cria uma transação BASIC (R$ 9.90/mês). O transaction_id é salvo automaticamente no environment. Se aprovada, atualiza role do usuário para BASIC.",
+      "parentId": "folder_transactions",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('transaction_id', body.id);\n  console.log('✅ Transaction ID salvo:', body.id);\n  console.log('Status:', body.status);\n} else {\n  console.log('❌ Falha ao obter transaction_id');\n}"
     },
     {
       "_id": "req_create_transaction_premium",
@@ -172,8 +176,9 @@
           "value": "application/json"
         }
       ],
-      "description": "Cria uma transação PREMIUM (R$ 19.90/mês). Valida regras de antifraude automaticamente. Se aprovada, atualiza role do usuário para PREMIUM.",
-      "parentId": "folder_transactions"
+      "description": "Cria uma transação PREMIUM (R$ 19.90/mês). O transaction_id é salvo automaticamente no environment. Se aprovada, atualiza role do usuário para PREMIUM.",
+      "parentId": "folder_transactions",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('transaction_id', body.id);\n  console.log('✅ Transaction ID salvo:', body.id);\n  console.log('Status:', body.status);\n} else {\n  console.log('❌ Falha ao obter transaction_id');\n}"
     },
     {
       "_id": "req_get_all_transactions",
@@ -211,6 +216,85 @@
       "name": "📋 Example Flow",
       "description": "Fluxo de exemplo completo",
       "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "folder_music",
+      "_type": "request_group",
+      "name": "🎵 Music",
+      "description": "Endpoints para gerenciamento de músicas",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_upload_music",
+      "_type": "request",
+      "name": "Upload Music (ADMIN only)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/music/upload",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "fileName": "/path/to/your/music.mp3",
+            "value": ""
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "Faz upload de um arquivo de música (MP3, AAC, FLAC) para o servidor. REQUER ROLE ADMIN! O music_id é salvo automaticamente no environment.",
+      "parentId": "folder_music",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('music_id', body.id);\n  console.log('✅ Music ID salvo:', body.id);\n} else {\n  console.log('❌ Falha ao obter music_id');\n}"
+    },
+    {
+      "_id": "req_list_music",
+      "_type": "request",
+      "name": "List All Music",
+      "method": "GET",
+      "url": "{{ _.base_url }}/music/list",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "Lista todas as músicas cadastradas no sistema. Requer autenticação (qualquer usuário logado pode listar).",
+      "parentId": "folder_music"
+    },
+    {
+      "_id": "req_download_music",
+      "_type": "request",
+      "name": "Download Music",
+      "method": "GET",
+      "url": "{{ _.base_url }}/music/download/{{ _.music_id }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "Faz download de uma música pelo ID. Requer autenticação via JWT. Valida permissões: SEM_PLANO não pode baixar, BASIC pode baixar MP3/AAC, PREMIUM pode baixar tudo.",
+      "parentId": "folder_music"
+    },
+    {
+      "_id": "req_stream_music",
+      "_type": "request",
+      "name": "Stream Music (Playback)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/music/stream/{{ _.music_id }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "Faz streaming/playback de uma música pelo ID. Requer autenticação via JWT. SEM_PLANO pode fazer stream de MP3/AAC, BASIC e PREMIUM podem fazer stream de tudo.",
+      "parentId": "folder_music"
     },
     {
       "_id": "req_example_1_create_user",

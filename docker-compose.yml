@@ -20,26 +20,55 @@ services:
     networks:
       - melodyhub-network
 
+  mongo:
+    image: mongo:latest
+    container_name: melodyhub-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+      MONGO_INITDB_DATABASE: melodyhub-files
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - melodyhub-network
+
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: melodyhub-app
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/melodyhub
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATA_MONGODB_URI: mongodb://root:rootpassword@mongo:27017/melodyhub-files?authSource=admin
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
     ports:
       - "8080:8080"
+    volumes:
+      # Montar código fonte para hot reload
+      - ./src:/app/src
+      - ./build.gradle.kts:/app/build.gradle.kts
+      - ./settings.gradle.kts:/app/settings.gradle.kts
+      # Cache do Gradle para não recompilar tudo
+      - gradle-cache:/home/gradle/.gradle
     depends_on:
       postgres:
         condition: service_healthy
+      mongo:
+        condition: service_started
     networks:
       - melodyhub-network
     restart: unless-stopped
 
 volumes:
   postgres_data:
+    driver: local
+  mongo_data:
+    driver: local
+  gradle-cache:
     driver: local
 
 networks:
