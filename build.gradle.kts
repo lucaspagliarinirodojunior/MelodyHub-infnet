@@ -63,3 +63,19 @@ allOpen {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+// Task para baixar dependências (usado no Dockerfile)
+tasks.register<Copy>("getDependencies") {
+    from(sourceSets.main.get().runtimeClasspath)
+    into("runtime/")
+
+    doFirst {
+        val runtimeDir = File("runtime")
+        runtimeDir.deleteRecursively()
+        runtimeDir.mkdir()
+    }
+
+    doLast {
+        File("runtime").deleteRecursively()
+    }
+}

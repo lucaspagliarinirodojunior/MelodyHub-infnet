@@ -18,7 +18,7 @@ class MusicService(
 ) {
 
     fun uploadMusic(file: MultipartFile): String {
-        val allowedTypes = listOf("audio/mpeg", "audio/aac", "audio/flac")
+        val allowedTypes = listOf("audio/mpeg", "audio/aac", "audio/flac", "audio/x-flac")
         if (file.contentType !in allowedTypes) {
             throw IllegalArgumentException("Invalid file type. Only MP3, AAC, and FLAC are allowed.")
         }

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -44,16 +42,12 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_DATA_MONGODB_URI: mongodb://root:rootpassword@mongo:27017/melodyhub-files?authSource=admin
-      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
     ports:
       - "8080:8080"
+      - "35729:35729"  # Porta do LiveReload
     volumes:
       # Montar código fonte para hot reload
-      - ./src:/app/src
-      - ./build.gradle.kts:/app/build.gradle.kts
-      - ./settings.gradle.kts:/app/settings.gradle.kts
-      # Cache do Gradle para não recompilar tudo
-      - gradle-cache:/home/gradle/.gradle
+      - ./src/main:/app/src/main
     depends_on:
       postgres:
         condition: service_healthy

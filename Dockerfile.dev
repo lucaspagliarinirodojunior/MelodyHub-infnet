@@ -1,19 +1,18 @@
-FROM gradle:8.14.3-jdk17
+FROM gradle:8.7-jdk17
+
 WORKDIR /app
 
-# Copy gradle files for dependency caching
-COPY build.gradle.kts settings.gradle.kts ./
-COPY gradle ./gradle
+# Copiar todo o projeto
+COPY . /app
 
-# Download dependencies
-RUN gradle dependencies --no-daemon || true
+# Expor porta da aplicação e porta do LiveReload
+EXPOSE 8080 35729
 
-# Expose port
-EXPOSE 8080
+# Dar permissão de execução ao script de start
+RUN chmod +x start.sh
 
-# Set development environment
-ENV SPRING_PROFILES_ACTIVE=default
-ENV SPRING_DEVTOOLS_RESTART_ENABLED=true
+# Baixar dependências do projeto
+RUN gradle getDependencies --no-daemon
 
-# Run application with continuous build
-CMD ["gradle", "bootRun", "--no-daemon", "--continuous"]
+# Script que monitora mudanças e executa bootRun
+CMD ["sh", "start.sh"]

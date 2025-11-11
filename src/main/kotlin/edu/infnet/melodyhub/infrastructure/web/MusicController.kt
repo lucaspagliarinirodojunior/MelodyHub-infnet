@@ -188,6 +188,7 @@ class MusicController(
 
             // Se passou nas validações, lista as músicas
             val musicList = musicService.getAllMusic()
+            println("🎵 Hot-reload funcionando! Listando ${musicList.size} músicas")
             ResponseEntity.ok().body(musicList)
         } catch (e: Exception) {
             ResponseEntity.badRequest().body(ErrorResponse(e.message ?: "Error listing music"))

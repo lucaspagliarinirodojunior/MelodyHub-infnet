@@ -6,6 +6,13 @@ spring:
   application:
     name: melodyhub
 
+  # Configuração para hot-reload com DevTools
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/melodyhub}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
