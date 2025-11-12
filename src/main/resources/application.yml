@@ -33,6 +33,21 @@ spring:
     mongodb:
       uri: mongodb://localhost:27017/melodyhub-files
 
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:melodyhub}
+    password: ${SPRING_RABBITMQ_PASSWORD:melodyhub123}
+    listener:
+      simple:
+        acknowledge-mode: auto
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
+          max-interval: 10000
+          multiplier: 2.0
+
 server:
   port: 8080
   error:

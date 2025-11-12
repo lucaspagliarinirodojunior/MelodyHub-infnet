@@ -9,5 +9,8 @@ data class CreateTransactionRequest(
     val userId: UUID,
 
     @field:NotNull(message = "Subscription type is required")
-    val subscriptionType: SubscriptionType
+    val subscriptionType: SubscriptionType,
+
+    @field:NotNull(message = "Credit card ID is required")
+    val creditCardId: Long
 )

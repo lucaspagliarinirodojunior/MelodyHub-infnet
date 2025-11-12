@@ -22,6 +22,9 @@ class Transaction(
     val subscriptionType: SubscriptionType,
 
     @Column(nullable = false)
+    val creditCardId: Long,
+
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     var status: TransactionStatus = TransactionStatus.PENDING,
 

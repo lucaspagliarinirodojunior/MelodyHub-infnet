@@ -1,18 +1,15 @@
 # Build stage
-FROM gradle:8.14.3-jdk17 AS build
+FROM gradle:8.7-jdk17 AS build
 WORKDIR /app
 
 # Copy gradle files
-COPY build.gradle.kts settings.gradle.kts ./
+COPY build.gradle.kts settings.gradle.kts gradle.properties ./
 COPY gradle ./gradle
-
-# Download dependencies
-RUN gradle dependencies --no-daemon || true
 
 # Copy source code
 COPY src ./src
 
-# Build application
+# Build application (downgrade gradle and cache will work)
 RUN gradle build --no-daemon -x test
 
 # Runtime stage

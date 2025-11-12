@@ -2,7 +2,14 @@ FROM gradle:8.7-jdk17
 
 WORKDIR /app
 
-# Copiar todo o projeto
+# Copiar arquivos de configuração do Gradle primeiro (para cache de dependências)
+COPY build.gradle.kts settings.gradle.kts gradle.properties ./
+COPY gradle/ ./gradle/
+
+# Baixar dependências (cache layer)
+RUN gradle build --no-daemon -x test -x bootJar || true
+
+# Copiar o resto do projeto
 COPY . /app
 
 # Expor porta da aplicação e porta do LiveReload
@@ -10,9 +17,6 @@ EXPOSE 8080 35729
 
 # Dar permissão de execução ao script de start
 RUN chmod +x start.sh
-
-# Baixar dependências do projeto
-RUN gradle getDependencies --no-daemon
 
 # Script que monitora mudanças e executa bootRun
 CMD ["sh", "start.sh"]

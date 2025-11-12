@@ -19,9 +19,7 @@
 
 Em outro terminal:
 
-```bash
-./test-api.sh
-```
+
 
 ## Opção 2: Testar com PostgreSQL (Produção)
 
@@ -44,11 +42,7 @@ sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
 ./gradlew bootRun
 ```
 
-### 3. Executar testes
 
-```bash
-./test-api.sh
-```
 
 ## Testes Manuais com cURL
 

@@ -1,0 +1,614 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-11-12T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_melodyhub",
+      "_type": "workspace",
+      "name": "MelodyHub API",
+      "description": "API do MelodyHub - Sistema de gerenciamento de assinaturas musicais com validação de cartão de crédito",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "user_id": "",
+        "credit_card_id": "",
+        "transaction_id": "",
+        "auth_token": "",
+        "music_id": ""
+      },
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "folder_auth",
+      "_type": "request_group",
+      "name": "🔐 Authentication",
+      "description": "Endpoints de autenticação",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_login",
+      "_type": "request",
+      "name": "Login",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"lucas@example.com\",\n  \"password\": \"minhasenha123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Faz login e retorna um token JWT com a role do usuário. O token é automaticamente salvo na variável auth_token do environment.",
+      "parentId": "folder_auth",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.token) {\n  insomnia.environment.set('auth_token', body.token);\n  if (body.userId) {\n    insomnia.environment.set('user_id', body.userId);\n  }\n  console.log('✅ Token salvo automaticamente!');\n} else {\n  console.log('❌ Falha ao obter token');\n}"
+    },
+    {
+      "_id": "req_me",
+      "_type": "request",
+      "name": "Me - Ver meu plano",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/me",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "Retorna os dados do usuário logado (userId, name, email, role) baseado no token JWT. Use este endpoint para ver qual plano você está!",
+      "parentId": "folder_auth"
+    },
+    {
+      "_id": "folder_users",
+      "_type": "request_group",
+      "name": "👥 Users",
+      "description": "Endpoints de gerenciamento de usuários",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_create_user",
+      "_type": "request",
+      "name": "Create User",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/users",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao.silva@example.com\",\n  \"password\": \"senha123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria um novo usuário com nome, email e senha. O user_id é automaticamente salvo no environment. Role padrão: SEM_PLANO.",
+      "parentId": "folder_users",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('user_id', body.id);\n  console.log('✅ User ID salvo automaticamente:', body.id);\n} else {\n  console.log('❌ Falha ao obter user_id');\n}"
+    },
+    {
+      "_id": "req_get_all_users",
+      "_type": "request",
+      "name": "Get All Users",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/users",
+      "headers": [],
+      "description": "Lista todos os usuários cadastrados",
+      "parentId": "folder_users"
+    },
+    {
+      "_id": "req_get_user_by_id",
+      "_type": "request",
+      "name": "Get User by ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/users/{{ _.user_id }}",
+      "headers": [],
+      "description": "Busca um usuário específico pelo ID (UUID). Configure user_id no environment.",
+      "parentId": "folder_users"
+    },
+    {
+      "_id": "req_get_user_by_email",
+      "_type": "request",
+      "name": "Get User by Email",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/users/email/joao.silva@example.com",
+      "headers": [],
+      "description": "Busca um usuário pelo email",
+      "parentId": "folder_users"
+    },
+    {
+      "_id": "req_delete_user",
+      "_type": "request",
+      "name": "Delete User",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/users/{{ _.user_id }}",
+      "headers": [],
+      "description": "Remove um usuário pelo ID (UUID). Configure user_id no environment.",
+      "parentId": "folder_users"
+    },
+    {
+      "_id": "folder_credit_cards",
+      "_type": "request_group",
+      "name": "💳 Credit Cards",
+      "description": "Endpoints de gerenciamento de cartões de crédito",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_create_credit_card_visa",
+      "_type": "request",
+      "name": "Create Credit Card - VISA",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/credit-cards",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"cardNumber\": \"4532015112830366\",\n  \"cardHolderName\": \"JOAO SILVA\",\n  \"expirationMonth\": 12,\n  \"expirationYear\": 2026,\n  \"cvv\": \"123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria um cartão VISA válido (algoritmo de Luhn). O credit_card_id é automaticamente salvo no environment.",
+      "parentId": "folder_credit_cards",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('credit_card_id', body.id);\n  console.log('✅ Credit Card ID salvo:', body.id);\n  console.log('Bandeira:', body.brand);\n  console.log('Status:', body.status);\n} else {\n  console.log('❌ Falha ao obter credit_card_id');\n}"
+    },
+    {
+      "_id": "req_create_credit_card_mastercard",
+      "_type": "request",
+      "name": "Create Credit Card - MASTERCARD",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/credit-cards",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"cardNumber\": \"5425233430109903\",\n  \"cardHolderName\": \"JOAO SILVA\",\n  \"expirationMonth\": 6,\n  \"expirationYear\": 2027,\n  \"cvv\": \"456\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria um cartão MASTERCARD válido (algoritmo de Luhn).",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_get_credit_card_by_id",
+      "_type": "request",
+      "name": "Get Credit Card by ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/credit-cards/{{ _.credit_card_id }}",
+      "headers": [],
+      "description": "Busca um cartão de crédito pelo ID. Mostra número mascarado, status e se está válido/expirado.",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_get_credit_cards_by_user",
+      "_type": "request",
+      "name": "Get Credit Cards by User",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/credit-cards/user/{{ _.user_id }}",
+      "headers": [],
+      "description": "Lista todos os cartões de crédito de um usuário (ativos e inativos).",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_get_active_credit_cards_by_user",
+      "_type": "request",
+      "name": "Get Active Credit Cards by User",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/credit-cards/user/{{ _.user_id }}/active",
+      "headers": [],
+      "description": "Lista apenas os cartões ATIVOS de um usuário.",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_update_card_status_inactive",
+      "_type": "request",
+      "name": "Update Card Status - INACTIVE",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/credit-cards/{{ _.credit_card_id }}/status",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"INACTIVE\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Desativa um cartão de crédito. Opções: ACTIVE, INACTIVE, BLOCKED.",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_update_card_status_active",
+      "_type": "request",
+      "name": "Update Card Status - ACTIVE",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/credit-cards/{{ _.credit_card_id }}/status",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"ACTIVE\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Reativa um cartão de crédito.",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_delete_credit_card",
+      "_type": "request",
+      "name": "Delete Credit Card",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/credit-cards/{{ _.credit_card_id }}",
+      "headers": [],
+      "description": "Remove um cartão de crédito do sistema.",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "folder_transactions",
+      "_type": "request_group",
+      "name": "💰 Transactions",
+      "description": "Endpoints de gerenciamento de transações/assinaturas",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_create_transaction_basic",
+      "_type": "request",
+      "name": "Create Transaction - BASIC",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/transactions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"BASIC\",\n  \"creditCardId\": {{ _.credit_card_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria uma transação BASIC (R$ 9.90/mês). REQUER creditCardId! Valida: cartão ativo, não expirado, pertence ao usuário, usuário sem plano ativo.",
+      "parentId": "folder_transactions",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('transaction_id', body.id);\n  console.log('✅ Transaction ID salvo:', body.id);\n  console.log('Status:', body.status);\n  if (body.fraudReason) {\n    console.log('❌ Motivo:', body.fraudReason);\n  }\n} else {\n  console.log('❌ Falha ao criar transação');\n}"
+    },
+    {
+      "_id": "req_create_transaction_premium",
+      "_type": "request",
+      "name": "Create Transaction - PREMIUM",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/transactions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"PREMIUM\",\n  \"creditCardId\": {{ _.credit_card_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria uma transação PREMIUM (R$ 19.90/mês). REQUER creditCardId! Valida todas as regras de antifraude.",
+      "parentId": "folder_transactions",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('transaction_id', body.id);\n  console.log('✅ Transaction ID salvo:', body.id);\n  console.log('Status:', body.status);\n  if (body.fraudReason) {\n    console.log('❌ Motivo:', body.fraudReason);\n  }\n} else {\n  console.log('❌ Falha ao criar transação');\n}"
+    },
+    {
+      "_id": "req_get_all_transactions",
+      "_type": "request",
+      "name": "Get All Transactions",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/transactions",
+      "headers": [],
+      "description": "Lista todas as transações cadastradas",
+      "parentId": "folder_transactions"
+    },
+    {
+      "_id": "req_get_transaction_by_id",
+      "_type": "request",
+      "name": "Get Transaction by ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/transactions/{{ _.transaction_id }}",
+      "headers": [],
+      "description": "Busca uma transação específica pelo ID (UUID). Mostra status e fraudReason se rejeitada.",
+      "parentId": "folder_transactions"
+    },
+    {
+      "_id": "req_get_transactions_by_user",
+      "_type": "request",
+      "name": "Get Transactions by User",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/transactions/user/{{ _.user_id }}",
+      "headers": [],
+      "description": "Lista todas as transações de um usuário específico.",
+      "parentId": "folder_transactions"
+    },
+    {
+      "_id": "folder_music",
+      "_type": "request_group",
+      "name": "🎵 Music",
+      "description": "Endpoints para gerenciamento de músicas",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_upload_music",
+      "_type": "request",
+      "name": "Upload Music (ADMIN only)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/music/upload",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "fileName": "/path/to/your/music.mp3",
+            "value": ""
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "Faz upload de um arquivo de música (MP3, AAC, FLAC) para o servidor. REQUER ROLE ADMIN! O music_id é salvo automaticamente no environment.",
+      "parentId": "folder_music",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('music_id', body.id);\n  console.log('✅ Music ID salvo:', body.id);\n} else {\n  console.log('❌ Falha ao obter music_id');\n}"
+    },
+    {
+      "_id": "req_list_music",
+      "_type": "request",
+      "name": "List All Music",
+      "method": "GET",
+      "url": "{{ _.base_url }}/music/list",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "Lista todas as músicas cadastradas no sistema. Requer autenticação (qualquer usuário logado pode listar).",
+      "parentId": "folder_music"
+    },
+    {
+      "_id": "req_download_music",
+      "_type": "request",
+      "name": "Download Music",
+      "method": "GET",
+      "url": "{{ _.base_url }}/music/download/{{ _.music_id }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "Faz download de uma música pelo ID. Requer autenticação via JWT. Valida permissões: SEM_PLANO não pode baixar, BASIC pode baixar MP3/AAC, PREMIUM pode baixar tudo.",
+      "parentId": "folder_music"
+    },
+    {
+      "_id": "req_stream_music",
+      "_type": "request",
+      "name": "Stream Music (Playback)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/music/stream/{{ _.music_id }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "Faz streaming/playback de uma música pelo ID. Requer autenticação via JWT. SEM_PLANO pode fazer stream de MP3/AAC, BASIC e PREMIUM podem fazer stream de tudo.",
+      "parentId": "folder_music"
+    },
+    {
+      "_id": "folder_test_flow",
+      "_type": "request_group",
+      "name": "🧪 COMPLETE TEST FLOW",
+      "description": "Fluxo completo de testes com validação de cartão e antifraude",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_test_1_create_user",
+      "_type": "request",
+      "name": "1️⃣ Create User",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/users",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Maria Santos\",\n  \"email\": \"maria.santos@test.com\",\n  \"password\": \"senha123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Passo 1: Criar usuário. O user_id é automaticamente salvo.",
+      "parentId": "folder_test_flow",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('user_id', body.id);\n  console.log('✅ User ID salvo:', body.id);\n  console.log('Role inicial:', body.role);\n} else {\n  console.log('❌ Falha ao criar usuário');\n}"
+    },
+    {
+      "_id": "req_test_2_create_valid_card",
+      "_type": "request",
+      "name": "2️⃣ Create Valid Credit Card",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/credit-cards",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"cardNumber\": \"4532015112830366\",\n  \"cardHolderName\": \"MARIA SANTOS\",\n  \"expirationMonth\": 12,\n  \"expirationYear\": 2026,\n  \"cvv\": \"123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Passo 2: Cadastrar cartão VISA válido. O credit_card_id é automaticamente salvo.",
+      "parentId": "folder_test_flow",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('credit_card_id', body.id);\n  console.log('✅ Credit Card ID salvo:', body.id);\n  console.log('Bandeira:', body.brand);\n  console.log('Número mascarado:', body.maskedCardNumber);\n  console.log('Válido:', body.isValid);\n} else {\n  console.log('❌ Falha ao criar cartão');\n}"
+    },
+    {
+      "_id": "req_test_3_get_user_cards",
+      "_type": "request",
+      "name": "3️⃣ Verify User Has Card",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/credit-cards/user/{{ _.user_id }}/active",
+      "headers": [],
+      "description": "Passo 3: Verificar que o usuário tem cartão ativo antes de criar transação.",
+      "parentId": "folder_test_flow"
+    },
+    {
+      "_id": "req_test_4_create_transaction",
+      "_type": "request",
+      "name": "4️⃣ Create Transaction (Should APPROVE)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/transactions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"PREMIUM\",\n  \"creditCardId\": {{ _.credit_card_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Passo 4: Criar transação. Deve ser APROVADA (cartão válido, usuário sem plano).",
+      "parentId": "folder_test_flow",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('transaction_id', body.id);\n  console.log('✅ Transaction ID:', body.id);\n  console.log('Status:', body.status);\n  if (body.status === 'APPROVED') {\n    console.log('✅ Transação APROVADA! Usuário agora é PREMIUM');\n  } else {\n    console.log('❌ Transação rejeitada:', body.fraudReason);\n  }\n} else {\n  console.log('❌ Falha ao criar transação');\n}"
+    },
+    {
+      "_id": "req_test_5_get_user_verify_role",
+      "_type": "request",
+      "name": "5️⃣ Verify User Role Updated",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/users/{{ _.user_id }}",
+      "headers": [],
+      "description": "Passo 5: Verificar que a role do usuário foi atualizada para PREMIUM.",
+      "parentId": "folder_test_flow"
+    },
+    {
+      "_id": "req_test_6_try_duplicate_plan",
+      "_type": "request",
+      "name": "6️⃣ Try Duplicate Plan (Should REJECT)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/transactions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"BASIC\",\n  \"creditCardId\": {{ _.credit_card_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Passo 6: Tentar criar segunda assinatura. Deve ser REJEITADA (usuário já tem plano ativo).",
+      "parentId": "folder_test_flow",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body) {\n  console.log('Status:', body.status);\n  if (body.status === 'REJECTED') {\n    console.log('✅ CORRETO! Transação rejeitada (já tem plano)');\n    console.log('Motivo:', body.fraudReason);\n  } else {\n    console.log('❌ ERRO! Transação deveria ser rejeitada!');\n  }\n}"
+    },
+    {
+      "_id": "req_test_7_deactivate_card",
+      "_type": "request",
+      "name": "7️⃣ Deactivate Card",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/credit-cards/{{ _.credit_card_id }}/status",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"INACTIVE\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Passo 7: Desativar o cartão para testar validação.",
+      "parentId": "folder_test_flow"
+    },
+    {
+      "_id": "req_test_8_create_new_user",
+      "_type": "request",
+      "name": "8️⃣ Create Second User (for card test)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/users",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Pedro Oliveira\",\n  \"email\": \"pedro@test.com\",\n  \"password\": \"senha123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Passo 8: Criar segundo usuário para testar transação com cartão inativo.",
+      "parentId": "folder_test_flow",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('user_id_2', body.id);\n  console.log('✅ Segundo User ID salvo:', body.id);\n}"
+    },
+    {
+      "_id": "req_test_9_create_card_for_user2",
+      "_type": "request",
+      "name": "9️⃣ Create Card for Second User",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/credit-cards",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id_2 }}\",\n  \"cardNumber\": \"5425233430109903\",\n  \"cardHolderName\": \"PEDRO OLIVEIRA\",\n  \"expirationMonth\": 6,\n  \"expirationYear\": 2027,\n  \"cvv\": \"456\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Passo 9: Criar cartão MASTERCARD para o segundo usuário.",
+      "parentId": "folder_test_flow",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('credit_card_id_2', body.id);\n  console.log('✅ Segundo Card ID salvo:', body.id);\n}"
+    },
+    {
+      "_id": "req_test_10_try_wrong_card_owner",
+      "_type": "request",
+      "name": "🔟 Try Transaction with Wrong Card (Should REJECT)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/transactions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"BASIC\",\n  \"creditCardId\": {{ _.credit_card_id_2 }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Passo 10: Tentar usar cartão de outro usuário. Deve ser REJEITADA.",
+      "parentId": "folder_test_flow",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body) {\n  console.log('Status:', body.status);\n  if (body.status === 'REJECTED' && body.fraudReason.includes('não pertence')) {\n    console.log('✅ CORRETO! Cartão não pertence ao usuário');\n    console.log('Motivo:', body.fraudReason);\n  } else {\n    console.log('❌ ERRO! Deveria rejeitar cartão de outro usuário!');\n  }\n}"
+    },
+    {
+      "_id": "req_test_11_summary",
+      "_type": "request",
+      "name": "1️⃣1️⃣ Get All Transactions (Summary)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/transactions",
+      "headers": [],
+      "description": "Passo 11: Ver resumo de todas as transações (aprovadas e rejeitadas).",
+      "parentId": "folder_test_flow"
+    }
+  ]
+}

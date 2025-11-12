@@ -4,6 +4,8 @@ import edu.infnet.melodyhub.application.user.dto.CreateUserRequest
 import edu.infnet.melodyhub.application.user.dto.UserResponse
 import edu.infnet.melodyhub.domain.user.User
 import edu.infnet.melodyhub.domain.user.UserRepository
+import edu.infnet.melodyhub.domain.playlist.Playlist
+import edu.infnet.melodyhub.domain.playlist.PlaylistRepository
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -11,7 +13,8 @@ import java.util.UUID
 
 @Service
 class UserService(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val playlistRepository: PlaylistRepository
 ) {
     private val passwordEncoder = BCryptPasswordEncoder()
 
@@ -30,6 +33,17 @@ class UserService(
         )
 
         val savedUser = userRepository.save(user)
+
+        // Criar playlist de Favoritos automaticamente
+        val favoritesPlaylist = Playlist(
+            name = "Favoritos",
+            description = "Minhas músicas favoritas",
+            userId = savedUser.id!!,
+            isDefault = true,
+            isPrivate = true
+        )
+        playlistRepository.save(favoritesPlaylist)
+
         return UserResponse.fromUser(savedUser)
     }
 

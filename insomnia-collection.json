@@ -1,14 +1,14 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2025-11-10T00:00:00.000Z",
+  "__export_date": "2025-11-12T00:00:00.000Z",
   "__export_source": "insomnia.desktop.app:v2023.5.8",
   "resources": [
     {
       "_id": "wrk_melodyhub",
       "_type": "workspace",
-      "name": "MelodyHub API",
-      "description": "API do MelodyHub - Sistema de gerenciamento de assinaturas musicais",
+      "name": "MelodyHub API - Complete Collection",
+      "description": "Collection completa da API MelodyHub com todos os endpoints organizados",
       "scope": "collection"
     },
     {
@@ -18,17 +18,24 @@
       "data": {
         "base_url": "http://localhost:8080",
         "user_id": "",
+        "user_id_2": "",
+        "admin_id": "",
+        "credit_card_id": "",
+        "credit_card_id_2": "",
         "transaction_id": "",
         "auth_token": "",
-        "music_id": ""
+        "admin_token": "",
+        "music_id": "",
+        "playlist_id": "",
+        "favorites_id": ""
       },
       "parentId": "wrk_melodyhub"
     },
     {
       "_id": "folder_auth",
       "_type": "request_group",
-      "name": "🔐 Authentication",
-      "description": "Endpoints de autenticação",
+      "name": "1. Authentication",
+      "description": "Endpoints de autentica\u00e7\u00e3o e verifica\u00e7\u00e3o de usu\u00e1rio",
       "parentId": "wrk_melodyhub"
     },
     {
@@ -39,7 +46,7 @@
       "url": "{{ _.base_url }}/api/auth/login",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"email\": \"lucas@example.com\",\n  \"password\": \"minhasenha123\"\n}"
+        "text": "{\n  \"email\": \"joao.silva@example.com\",\n  \"password\": \"senha123\"\n}"
       },
       "headers": [
         {
@@ -47,14 +54,14 @@
           "value": "application/json"
         }
       ],
-      "description": "Faz login e retorna um token JWT com a role do usuário. O token é automaticamente salvo na variável auth_token do environment.",
+      "description": "Faz login e retorna um token JWT. O token \u00e9 automaticamente salvo em auth_token.",
       "parentId": "folder_auth",
-      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.token) {\n  insomnia.environment.set('auth_token', body.token);\n  if (body.userId) {\n    insomnia.environment.set('user_id', body.userId);\n  }\n  console.log('✅ Token salvo automaticamente!');\n} else {\n  console.log('❌ Falha ao obter token');\n}"
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.token) {\n  insomnia.environment.set('auth_token', body.token);\n  if (body.userId) {\n    insomnia.environment.set('user_id', body.userId);\n  }\n  console.log('Token salvo! Role:', body.role);\n  console.log('User ID:', body.userId);\n} else {\n  console.log('Falha ao obter token');\n}"
     },
     {
       "_id": "req_me",
       "_type": "request",
-      "name": "Me - Ver meu plano",
+      "name": "Get Current User Info",
       "method": "GET",
       "url": "{{ _.base_url }}/api/auth/me",
       "headers": [
@@ -63,14 +70,14 @@
           "value": "Bearer {{ _.auth_token }}"
         }
       ],
-      "description": "Retorna os dados do usuário logado (userId, name, email, role) baseado no token JWT. Use este endpoint para ver qual plano você está!",
+      "description": "Retorna dados do usu\u00e1rio logado (userId, name, email, role).",
       "parentId": "folder_auth"
     },
     {
       "_id": "folder_users",
       "_type": "request_group",
-      "name": "Users",
-      "description": "Endpoints de gerenciamento de usuários",
+      "name": "2. Users",
+      "description": "CRUD de usu\u00e1rios",
       "parentId": "wrk_melodyhub"
     },
     {
@@ -81,7 +88,7 @@
       "url": "{{ _.base_url }}/api/users",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao.silva@example.com\",\n  \"password\": \"senha123\"\n}"
+        "text": "{\n  \"name\": \"Jo\u00e3o Silva\",\n  \"email\": \"joao.silva@example.com\",\n  \"password\": \"senha123\"\n}"
       },
       "headers": [
         {
@@ -89,9 +96,9 @@
           "value": "application/json"
         }
       ],
-      "description": "Cria um novo usuário com nome, email e senha. O user_id é automaticamente salvo no environment. Role padrão: SEM_PLANO.",
+      "description": "Cria um novo usu\u00e1rio. Role inicial: SEM_PLANO. O user_id \u00e9 automaticamente salvo.",
       "parentId": "folder_users",
-      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('user_id', body.id);\n  console.log('✅ User ID salvo automaticamente:', body.id);\n} else {\n  console.log('❌ Falha ao obter user_id');\n}"
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('user_id', body.id);\n  console.log('User ID salvo:', body.id);\n  console.log('Role:', body.role);\n} else {\n  console.log('Falha ao criar usu\u00e1rio');\n}"
     },
     {
       "_id": "req_get_all_users",
@@ -100,7 +107,7 @@
       "method": "GET",
       "url": "{{ _.base_url }}/api/users",
       "headers": [],
-      "description": "Lista todos os usuários cadastrados",
+      "description": "Lista todos os usu\u00e1rios cadastrados.",
       "parentId": "folder_users"
     },
     {
@@ -110,7 +117,7 @@
       "method": "GET",
       "url": "{{ _.base_url }}/api/users/{{ _.user_id }}",
       "headers": [],
-      "description": "Busca um usuário específico pelo ID (UUID). Configure user_id no environment.",
+      "description": "Busca um usu\u00e1rio espec\u00edfico pelo ID (UUID).",
       "parentId": "folder_users"
     },
     {
@@ -120,7 +127,7 @@
       "method": "GET",
       "url": "{{ _.base_url }}/api/users/email/joao.silva@example.com",
       "headers": [],
-      "description": "Busca um usuário pelo email",
+      "description": "Busca um usu\u00e1rio pelo email.",
       "parentId": "folder_users"
     },
     {
@@ -130,25 +137,168 @@
       "method": "DELETE",
       "url": "{{ _.base_url }}/api/users/{{ _.user_id }}",
       "headers": [],
-      "description": "Remove um usuário pelo ID (UUID). Configure user_id no environment.",
+      "description": "Remove um usu\u00e1rio pelo ID.",
       "parentId": "folder_users"
+    },
+    {
+      "_id": "folder_credit_cards",
+      "_type": "request_group",
+      "name": "3. Credit Cards",
+      "description": "Gerenciamento de cart\u00f5es de cr\u00e9dito com valida\u00e7\u00e3o Luhn",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_create_credit_card_visa",
+      "_type": "request",
+      "name": "Create Credit Card - VISA",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/credit-cards",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"cardNumber\": \"4532015112830366\",\n  \"cardHolderName\": \"JOAO SILVA\",\n  \"expirationMonth\": 12,\n  \"expirationYear\": 2026,\n  \"cvv\": \"123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria um cart\u00e3o VISA v\u00e1lido (algoritmo de Luhn). O credit_card_id \u00e9 salvo automaticamente.",
+      "parentId": "folder_credit_cards",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('credit_card_id', body.id);\n  console.log('Card ID:', body.id);\n  console.log('Bandeira:', body.brand);\n  console.log('Mascarado:', body.maskedCardNumber);\n  console.log('V\u00e1lido:', body.isValid);\n} else {\n  console.log('Falha ao criar cart\u00e3o');\n}"
+    },
+    {
+      "_id": "req_create_credit_card_mastercard",
+      "_type": "request",
+      "name": "Create Credit Card - MASTERCARD",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/credit-cards",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"cardNumber\": \"5425233430109903\",\n  \"cardHolderName\": \"JOAO SILVA\",\n  \"expirationMonth\": 6,\n  \"expirationYear\": 2027,\n  \"cvv\": \"456\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria um cart\u00e3o MASTERCARD v\u00e1lido.",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_create_credit_card_amex",
+      "_type": "request",
+      "name": "Create Credit Card - AMEX",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/credit-cards",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"cardNumber\": \"378282246310005\",\n  \"cardHolderName\": \"JOAO SILVA\",\n  \"expirationMonth\": 3,\n  \"expirationYear\": 2028,\n  \"cvv\": \"1234\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria um cart\u00e3o AMERICAN EXPRESS v\u00e1lido (CVV de 4 d\u00edgitos).",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_get_credit_card_by_id",
+      "_type": "request",
+      "name": "Get Credit Card by ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/credit-cards/{{ _.credit_card_id }}",
+      "headers": [],
+      "description": "Busca um cart\u00e3o pelo ID. Mostra n\u00famero mascarado e valida\u00e7\u00f5es.",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_get_credit_cards_by_user",
+      "_type": "request",
+      "name": "Get All User Cards",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/credit-cards/user/{{ _.user_id }}",
+      "headers": [],
+      "description": "Lista todos os cart\u00f5es do usu\u00e1rio (ativos e inativos).",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_get_active_credit_cards",
+      "_type": "request",
+      "name": "Get Active User Cards",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/credit-cards/user/{{ _.user_id }}/active",
+      "headers": [],
+      "description": "Lista apenas os cart\u00f5es ATIVOS do usu\u00e1rio.",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_update_card_status_inactive",
+      "_type": "request",
+      "name": "Deactivate Card",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/credit-cards/{{ _.credit_card_id }}/status",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"INACTIVE\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Desativa um cart\u00e3o. Status dispon\u00edveis: ACTIVE, INACTIVE, BLOCKED.",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_update_card_status_active",
+      "_type": "request",
+      "name": "Activate Card",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/credit-cards/{{ _.credit_card_id }}/status",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"ACTIVE\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Reativa um cart\u00e3o desativado.",
+      "parentId": "folder_credit_cards"
+    },
+    {
+      "_id": "req_delete_credit_card",
+      "_type": "request",
+      "name": "Delete Credit Card",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/credit-cards/{{ _.credit_card_id }}",
+      "headers": [],
+      "description": "Remove um cart\u00e3o do sistema.",
+      "parentId": "folder_credit_cards"
     },
     {
       "_id": "folder_transactions",
       "_type": "request_group",
-      "name": "Transactions",
-      "description": "Endpoints de gerenciamento de transações/assinaturas",
+      "name": "4. Transactions",
+      "description": "Transa\u00e7\u00f5es com valida\u00e7\u00e3o antifraude completa",
       "parentId": "wrk_melodyhub"
     },
     {
       "_id": "req_create_transaction_basic",
       "_type": "request",
-      "name": "Create Transaction - BASIC",
+      "name": "Create Transaction - BASIC Plan",
       "method": "POST",
       "url": "{{ _.base_url }}/api/transactions",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"BASIC\"\n}"
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"BASIC\",\n  \"creditCardId\": {{ _.credit_card_id }}\n}"
       },
       "headers": [
         {
@@ -156,19 +306,19 @@
           "value": "application/json"
         }
       ],
-      "description": "Cria uma transação BASIC (R$ 9.90/mês). O transaction_id é salvo automaticamente no environment. Se aprovada, atualiza role do usuário para BASIC.",
+      "description": "Cria assinatura BASIC (R$ 9.90). Valida: cart\u00e3o ativo, n\u00e3o expirado, pertence ao usu\u00e1rio, sem plano ativo.",
       "parentId": "folder_transactions",
-      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('transaction_id', body.id);\n  console.log('✅ Transaction ID salvo:', body.id);\n  console.log('Status:', body.status);\n} else {\n  console.log('❌ Falha ao obter transaction_id');\n}"
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('transaction_id', body.id);\n  console.log('Transaction ID:', body.id);\n  console.log('Status:', body.status);\n  if (body.status === 'APPROVED') {\n    console.log('APROVADA! Usu\u00e1rio agora \u00e9 BASIC');\n  } else {\n    console.log('REJEITADA:', body.fraudReason);\n  }\n}"
     },
     {
       "_id": "req_create_transaction_premium",
       "_type": "request",
-      "name": "Create Transaction - PREMIUM",
+      "name": "Create Transaction - PREMIUM Plan",
       "method": "POST",
       "url": "{{ _.base_url }}/api/transactions",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"PREMIUM\"\n}"
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"PREMIUM\",\n  \"creditCardId\": {{ _.credit_card_id }}\n}"
       },
       "headers": [
         {
@@ -176,9 +326,9 @@
           "value": "application/json"
         }
       ],
-      "description": "Cria uma transação PREMIUM (R$ 19.90/mês). O transaction_id é salvo automaticamente no environment. Se aprovada, atualiza role do usuário para PREMIUM.",
+      "description": "Cria assinatura PREMIUM (R$ 19.90). Passa por todas valida\u00e7\u00f5es antifraude.",
       "parentId": "folder_transactions",
-      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('transaction_id', body.id);\n  console.log('✅ Transaction ID salvo:', body.id);\n  console.log('Status:', body.status);\n} else {\n  console.log('❌ Falha ao obter transaction_id');\n}"
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('transaction_id', body.id);\n  console.log('Transaction ID:', body.id);\n  console.log('Status:', body.status);\n  if (body.status === 'APPROVED') {\n    console.log('APROVADA! Usu\u00e1rio agora \u00e9 PREMIUM');\n  } else {\n    console.log('REJEITADA:', body.fraudReason);\n  }\n}"
     },
     {
       "_id": "req_get_all_transactions",
@@ -187,7 +337,7 @@
       "method": "GET",
       "url": "{{ _.base_url }}/api/transactions",
       "headers": [],
-      "description": "Lista todas as transações cadastradas",
+      "description": "Lista todas as transa\u00e7\u00f5es (aprovadas e rejeitadas).",
       "parentId": "folder_transactions"
     },
     {
@@ -197,35 +347,28 @@
       "method": "GET",
       "url": "{{ _.base_url }}/api/transactions/{{ _.transaction_id }}",
       "headers": [],
-      "description": "Busca uma transação específica pelo ID (UUID). Configure transaction_id no environment.",
+      "description": "Busca uma transa\u00e7\u00e3o espec\u00edfica. Mostra status e fraudReason se rejeitada.",
       "parentId": "folder_transactions"
     },
     {
       "_id": "req_get_transactions_by_user",
       "_type": "request",
-      "name": "Get Transactions by User",
+      "name": "Get User Transactions",
       "method": "GET",
       "url": "{{ _.base_url }}/api/transactions/user/{{ _.user_id }}",
       "headers": [],
-      "description": "Lista todas as transações de um usuário específico. Configure user_id no environment.",
+      "description": "Lista todas as transa\u00e7\u00f5es de um usu\u00e1rio.",
       "parentId": "folder_transactions"
-    },
-    {
-      "_id": "folder_examples",
-      "_type": "request_group",
-      "name": "📋 Example Flow",
-      "description": "Fluxo de exemplo completo",
-      "parentId": "wrk_melodyhub"
     },
     {
       "_id": "folder_music",
       "_type": "request_group",
-      "name": "🎵 Music",
-      "description": "Endpoints para gerenciamento de músicas",
+      "name": "5. Music",
+      "description": "Upload, download e streaming de m\u00fasicas (requer autentica\u00e7\u00e3o)",
       "parentId": "wrk_melodyhub"
     },
     {
-      "_id": "req_upload_music",
+      "_id": "req_upload_music_mp3",
       "_type": "request",
       "name": "Upload Music (ADMIN only)",
       "method": "POST",
@@ -236,23 +379,23 @@
           {
             "name": "file",
             "type": "file",
-            "fileName": "/path/to/your/music.mp3",
-            "value": ""
+            "fileName": "",
+            "description": "Selecione um arquivo MP3, AAC ou FLAC"
           }
         ]
       },
       "headers": [
         {
           "name": "Authorization",
-          "value": "Bearer {{ _.auth_token }}"
+          "value": "Bearer {{ _.admin_token }}"
         }
       ],
-      "description": "Faz upload de um arquivo de música (MP3, AAC, FLAC) para o servidor. REQUER ROLE ADMIN! O music_id é salvo automaticamente no environment.",
+      "description": "Upload de m\u00fasica. REQUER ROLE ADMIN! Formatos: MP3, AAC, FLAC (max 200MB).",
       "parentId": "folder_music",
-      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('music_id', body.id);\n  console.log('✅ Music ID salvo:', body.id);\n} else {\n  console.log('❌ Falha ao obter music_id');\n}"
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('music_id', body.id);\n  console.log('Music ID salvo:', body.id);\n  console.log('Nome:', body.filename);\n  console.log('Tipo:', body.contentType);\n} else {\n  console.log('Falha no upload');\n}"
     },
     {
-      "_id": "req_list_music",
+      "_id": "req_list_all_music",
       "_type": "request",
       "name": "List All Music",
       "method": "GET",
@@ -263,7 +406,7 @@
           "value": "Bearer {{ _.auth_token }}"
         }
       ],
-      "description": "Lista todas as músicas cadastradas no sistema. Requer autenticação (qualquer usuário logado pode listar).",
+      "description": "Lista todas as m\u00fasicas dispon\u00edveis. Requer autentica\u00e7\u00e3o.",
       "parentId": "folder_music"
     },
     {
@@ -278,13 +421,13 @@
           "value": "Bearer {{ _.auth_token }}"
         }
       ],
-      "description": "Faz download de uma música pelo ID. Requer autenticação via JWT. Valida permissões: SEM_PLANO não pode baixar, BASIC pode baixar MP3/AAC, PREMIUM pode baixar tudo.",
+      "description": "Download de m\u00fasica. Permiss\u00f5es: SEM_PLANO (n\u00e3o pode), BASIC (MP3/AAC), PREMIUM (todos).",
       "parentId": "folder_music"
     },
     {
       "_id": "req_stream_music",
       "_type": "request",
-      "name": "Stream Music (Playback)",
+      "name": "Stream Music",
       "method": "GET",
       "url": "{{ _.base_url }}/music/stream/{{ _.music_id }}",
       "headers": [
@@ -293,18 +436,188 @@
           "value": "Bearer {{ _.auth_token }}"
         }
       ],
-      "description": "Faz streaming/playback de uma música pelo ID. Requer autenticação via JWT. SEM_PLANO pode fazer stream de MP3/AAC, BASIC e PREMIUM podem fazer stream de tudo.",
+      "description": "Streaming de m\u00fasica. Permiss\u00f5es: SEM_PLANO (MP3/AAC), BASIC+ (todos).",
       "parentId": "folder_music"
     },
     {
-      "_id": "req_example_1_create_user",
+      "_id": "folder_playlists",
+      "_type": "request_group",
+      "name": "6. Playlists",
+      "description": "Criar e gerenciar playlists personalizadas",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_create_playlist",
       "_type": "request",
-      "name": "1. Create User",
+      "name": "Create Playlist",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/playlists",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"name\": \"Minhas Favoritas Rock\",\n  \"description\": \"As melhores m\u00fasicas de rock\",\n  \"isPublic\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria uma nova playlist. Pode ser p\u00fablica ou privada.",
+      "parentId": "folder_playlists",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('playlist_id', body.id);\n  console.log('Playlist ID:', body.id);\n  console.log('Nome:', body.name);\n  console.log('P\u00fablica:', body.isPublic);\n}"
+    },
+    {
+      "_id": "req_get_playlist_by_id",
+      "_type": "request",
+      "name": "Get Playlist by ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/playlists/{{ _.playlist_id }}?requestingUserId={{ _.user_id }}",
+      "headers": [],
+      "description": "Busca uma playlist. Se privada, s\u00f3 o dono pode ver.",
+      "parentId": "folder_playlists"
+    },
+    {
+      "_id": "req_get_playlist_with_musics",
+      "_type": "request",
+      "name": "Get Playlist with Music Details",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/playlists/{{ _.playlist_id }}/with-musics?requestingUserId={{ _.user_id }}",
+      "headers": [],
+      "description": "Busca playlist com detalhes completos das m\u00fasicas (metadata do MongoDB).",
+      "parentId": "folder_playlists"
+    },
+    {
+      "_id": "req_get_user_playlists",
+      "_type": "request",
+      "name": "Get User Playlists",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/playlists/user/{{ _.user_id }}",
+      "headers": [],
+      "description": "Lista todas as playlists de um usu\u00e1rio.",
+      "parentId": "folder_playlists"
+    },
+    {
+      "_id": "req_update_playlist",
+      "_type": "request",
+      "name": "Update Playlist",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/playlists/{{ _.playlist_id }}?userId={{ _.user_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Minhas Favoritas Rock - Atualizada\",\n  \"description\": \"Rock cl\u00e1ssico e moderno\",\n  \"isPublic\": false\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Atualiza nome, descri\u00e7\u00e3o ou visibilidade da playlist.",
+      "parentId": "folder_playlists"
+    },
+    {
+      "_id": "req_delete_playlist",
+      "_type": "request",
+      "name": "Delete Playlist",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/playlists/{{ _.playlist_id }}?userId={{ _.user_id }}",
+      "headers": [],
+      "description": "Deleta uma playlist. Apenas o dono pode deletar.",
+      "parentId": "folder_playlists"
+    },
+    {
+      "_id": "req_add_music_to_playlist",
+      "_type": "request",
+      "name": "Add Music to Playlist",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/playlists/{{ _.playlist_id }}/musics?userId={{ _.user_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"musicId\": \"{{ _.music_id }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Adiciona uma m\u00fasica \u00e0 playlist.",
+      "parentId": "folder_playlists"
+    },
+    {
+      "_id": "req_remove_music_from_playlist",
+      "_type": "request",
+      "name": "Remove Music from Playlist",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/playlists/{{ _.playlist_id }}/musics/{{ _.music_id }}?userId={{ _.user_id }}",
+      "headers": [],
+      "description": "Remove uma m\u00fasica da playlist.",
+      "parentId": "folder_playlists"
+    },
+    {
+      "_id": "req_reorder_music",
+      "_type": "request",
+      "name": "Reorder Music in Playlist",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/playlists/{{ _.playlist_id }}/musics/{{ _.music_id }}/reorder?userId={{ _.user_id }}&newPosition=0",
+      "headers": [],
+      "description": "Reordena uma m\u00fasica na playlist (muda posi\u00e7\u00e3o). newPosition come\u00e7a em 0.",
+      "parentId": "folder_playlists"
+    },
+    {
+      "_id": "folder_favorites",
+      "_type": "request_group",
+      "name": "7. Favorites",
+      "description": "Gerenciar m\u00fasicas favoritas do usu\u00e1rio",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_get_favorites",
+      "_type": "request",
+      "name": "Get User Favorites",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/favorites?userId={{ _.user_id }}",
+      "headers": [],
+      "description": "Retorna a playlist de favoritos do usu\u00e1rio (criada automaticamente).",
+      "parentId": "folder_favorites",
+      "afterResponseScript": "const response = insomnia.response;\nconst body = JSON.parse(response.body);\n\nif (body && body.id) {\n  insomnia.environment.set('favorites_id', body.id);\n  console.log('Favorites playlist ID:', body.id);\n}"
+    },
+    {
+      "_id": "req_add_to_favorites",
+      "_type": "request",
+      "name": "Add to Favorites",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/favorites?userId={{ _.user_id }}&musicId={{ _.music_id }}",
+      "headers": [],
+      "description": "Adiciona uma m\u00fasica aos favoritos do usu\u00e1rio.",
+      "parentId": "folder_favorites"
+    },
+    {
+      "_id": "req_remove_from_favorites",
+      "_type": "request",
+      "name": "Remove from Favorites",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/favorites/{{ _.music_id }}?userId={{ _.user_id }}",
+      "headers": [],
+      "description": "Remove uma m\u00fasica dos favoritos.",
+      "parentId": "folder_favorites"
+    },
+    {
+      "_id": "folder_test_complete",
+      "_type": "request_group",
+      "name": "TEST - Complete Flow",
+      "description": "Fluxo completo de teste com TODOS os recursos do sistema (execute na ordem)",
+      "parentId": "wrk_melodyhub"
+    },
+    {
+      "_id": "req_test_01",
+      "_type": "request",
+      "name": "01 - Create Regular User",
       "method": "POST",
       "url": "{{ _.base_url }}/api/users",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Maria Santos\",\n  \"email\": \"maria.santos@example.com\",\n  \"password\": \"minhasenha123\"\n}"
+        "text": "{\n  \"name\": \"Maria Santos\",\n  \"email\": \"maria.santos@test.com\",\n  \"password\": \"senha123\"\n}"
       },
       "headers": [
         {
@@ -312,18 +625,19 @@
           "value": "application/json"
         }
       ],
-      "description": "1️⃣ Criar usuário e copiar o ID retornado para o environment",
-      "parentId": "folder_examples"
+      "description": "Cria um usu\u00e1rio regular para testes.",
+      "parentId": "folder_test_complete",
+      "afterResponseScript": "const body = JSON.parse(insomnia.response.body);\nif (body && body.id) {\n  insomnia.environment.set('user_id', body.id);\n  console.log('User ID:', body.id, '| Role:', body.role);\n}"
     },
     {
-      "_id": "req_example_2_create_transaction",
+      "_id": "req_test_02",
       "_type": "request",
-      "name": "2. Create Transaction",
+      "name": "02 - Create Admin User",
       "method": "POST",
-      "url": "{{ _.base_url }}/api/transactions",
+      "url": "{{ _.base_url }}/api/users",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"PREMIUM\"\n}"
+        "text": "{\n  \"name\": \"Admin System\",\n  \"email\": \"admin@melodyhub.com\",\n  \"password\": \"admin123\"\n}"
       },
       "headers": [
         {
@@ -331,18 +645,19 @@
           "value": "application/json"
         }
       ],
-      "description": "2️⃣ Criar transação usando o user_id do passo anterior",
-      "parentId": "folder_examples"
+      "description": "Cria usu\u00e1rio ADMIN. ATEN\u00c7\u00c3O: Voc\u00ea precisa atualizar manualmente a role para ADMIN no banco!",
+      "parentId": "folder_test_complete",
+      "afterResponseScript": "const body = JSON.parse(insomnia.response.body);\nif (body && body.id) {\n  insomnia.environment.set('admin_id', body.id);\n  console.log('Admin ID:', body.id);\n  console.log('ATENCAO: Atualize a role para ADMIN no banco de dados!');\n  console.log('SQL: UPDATE users SET role = \\'ADMIN\\' WHERE id = \\'' + body.id + '\\';');\n}"
     },
     {
-      "_id": "req_example_3_login",
+      "_id": "req_test_03",
       "_type": "request",
-      "name": "3. Login",
+      "name": "03 - Login Admin",
       "method": "POST",
       "url": "{{ _.base_url }}/api/auth/login",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"email\": \"maria.santos@example.com\",\n  \"password\": \"minhasenha123\"\n}"
+        "text": "{\n  \"email\": \"admin@melodyhub.com\",\n  \"password\": \"admin123\"\n}"
       },
       "headers": [
         {
@@ -350,48 +665,250 @@
           "value": "application/json"
         }
       ],
-      "description": "3️⃣ Fazer login e copiar o token retornado para a variável auth_token",
-      "parentId": "folder_examples"
+      "description": "Faz login do admin para obter token JWT.",
+      "parentId": "folder_test_complete",
+      "afterResponseScript": "const body = JSON.parse(insomnia.response.body);\nif (body && body.token) {\n  insomnia.environment.set('admin_token', body.token);\n  console.log('Admin token salvo! Role:', body.role);\n}"
     },
     {
-      "_id": "req_example_4_check_plan",
+      "_id": "req_test_04",
       "_type": "request",
-      "name": "4. Check My Plan (usando token)",
-      "method": "GET",
-      "url": "{{ _.base_url }}/api/auth/me",
+      "name": "04 - Upload Music (ADMIN)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/music/upload",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "fileName": "",
+            "description": "Selecione um arquivo MP3 de teste"
+          }
+        ]
+      },
       "headers": [
         {
           "name": "Authorization",
-          "value": "Bearer {{ _.auth_token }}"
+          "value": "Bearer {{ _.admin_token }}"
         }
       ],
-      "description": "4️⃣ Ver qual plano está ativo (role: SEM_PLANO). Usa apenas o token!",
-      "parentId": "folder_examples"
+      "description": "Admin faz upload de m\u00fasica MP3.",
+      "parentId": "folder_test_complete",
+      "afterResponseScript": "const body = JSON.parse(insomnia.response.body);\nif (body && body.id) {\n  insomnia.environment.set('music_id', body.id);\n  console.log('Music ID:', body.id);\n  console.log('Nome:', body.filename);\n}"
     },
     {
-      "_id": "req_example_5_get_user_transactions",
+      "_id": "req_test_05",
       "_type": "request",
-      "name": "5. Get User Transactions",
+      "name": "05 - List All Music",
       "method": "GET",
-      "url": "{{ _.base_url }}/api/transactions/user/{{ _.user_id }}",
+      "url": "{{ _.base_url }}/music/list",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.admin_token }}"
+        }
+      ],
+      "description": "Lista todas as m\u00fasicas dispon\u00edveis.",
+      "parentId": "folder_test_complete"
+    },
+    {
+      "_id": "req_test_06",
+      "_type": "request",
+      "name": "06 - Create Credit Card",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/credit-cards",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"cardNumber\": \"4532015112830366\",\n  \"cardHolderName\": \"MARIA SANTOS\",\n  \"expirationMonth\": 12,\n  \"expirationYear\": 2026,\n  \"cvv\": \"123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cadastra cart\u00e3o VISA v\u00e1lido para o usu\u00e1rio.",
+      "parentId": "folder_test_complete",
+      "afterResponseScript": "const body = JSON.parse(insomnia.response.body);\nif (body && body.id) {\n  insomnia.environment.set('credit_card_id', body.id);\n  console.log('Card ID:', body.id, '| V\u00e1lido:', body.isValid);\n}"
+    },
+    {
+      "_id": "req_test_07",
+      "_type": "request",
+      "name": "07 - Subscribe to PREMIUM",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/transactions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"PREMIUM\",\n  \"creditCardId\": {{ _.credit_card_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria assinatura PREMIUM. Deve ser APROVADA.",
+      "parentId": "folder_test_complete",
+      "afterResponseScript": "const body = JSON.parse(insomnia.response.body);\nif (body) {\n  console.log('Status:', body.status);\n  if (body.status === 'APPROVED') {\n    console.log('APROVADA! User agora \u00e9 PREMIUM');\n  } else {\n    console.log('REJEITADA:', body.fraudReason);\n  }\n}"
+    },
+    {
+      "_id": "req_test_08",
+      "_type": "request",
+      "name": "08 - Login User",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"maria.santos@test.com\",\n  \"password\": \"senha123\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Login do usu\u00e1rio para obter token (agora com role PREMIUM).",
+      "parentId": "folder_test_complete",
+      "afterResponseScript": "const body = JSON.parse(insomnia.response.body);\nif (body && body.token) {\n  insomnia.environment.set('auth_token', body.token);\n  if (body.userId) {\n    insomnia.environment.set('user_id', body.userId);\n  }\n  console.log('Token salvo! Role:', body.role);\n  console.log('User ID salvo:', body.userId);\n} else {\n  console.log('Falha no login');\n}"
+    },
+    {
+      "_id": "req_test_09",
+      "_type": "request",
+      "name": "09 - Create Playlist",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/playlists",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"name\": \"Rock Classics\",\n  \"description\": \"The best rock songs ever\",\n  \"isPublic\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria uma playlist p\u00fablica.",
+      "parentId": "folder_test_complete",
+      "afterResponseScript": "const body = JSON.parse(insomnia.response.body);\nif (body && body.id) {\n  insomnia.environment.set('playlist_id', body.id);\n  console.log('Playlist ID:', body.id);\n}"
+    },
+    {
+      "_id": "req_test_10",
+      "_type": "request",
+      "name": "10 - Add Music to Playlist",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/playlists/{{ _.playlist_id }}/musics?userId={{ _.user_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"musicId\": \"{{ _.music_id }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Adiciona a m\u00fasica \u00e0 playlist.",
+      "parentId": "folder_test_complete"
+    },
+    {
+      "_id": "req_test_11",
+      "_type": "request",
+      "name": "11 - Get Playlist with Musics",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/playlists/{{ _.playlist_id }}/with-musics?requestingUserId={{ _.user_id }}",
       "headers": [],
-      "description": "5️⃣ Listar todas as transações do usuário",
-      "parentId": "folder_examples"
+      "description": "Busca playlist com detalhes completos das m\u00fasicas.",
+      "parentId": "folder_test_complete"
     },
     {
-      "_id": "req_example_6_check_plan_after",
+      "_id": "req_test_12",
       "_type": "request",
-      "name": "6. Check My Plan Again (agora com PREMIUM)",
+      "name": "12 - Add to Favorites",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/favorites?userId={{ _.user_id }}&musicId={{ _.music_id }}",
+      "headers": [],
+      "description": "Adiciona a m\u00fasica aos favoritos.",
+      "parentId": "folder_test_complete"
+    },
+    {
+      "_id": "req_test_13",
+      "_type": "request",
+      "name": "13 - Get Favorites",
       "method": "GET",
-      "url": "{{ _.base_url }}/api/auth/me",
+      "url": "{{ _.base_url }}/api/favorites?userId={{ _.user_id }}",
+      "headers": [],
+      "description": "Busca playlist de favoritos (criada automaticamente).",
+      "parentId": "folder_test_complete"
+    },
+    {
+      "_id": "req_test_14",
+      "_type": "request",
+      "name": "14 - Stream Music (PREMIUM)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/music/stream/{{ _.music_id }}",
       "headers": [
         {
           "name": "Authorization",
           "value": "Bearer {{ _.auth_token }}"
         }
       ],
-      "description": "6️⃣ Ver o plano atualizado (role: PREMIUM). Automaticamente mudou após transação aprovada!",
-      "parentId": "folder_examples"
+      "description": "Faz streaming da m\u00fasica (usu\u00e1rio PREMIUM pode fazer stream de tudo).",
+      "parentId": "folder_test_complete"
+    },
+    {
+      "_id": "req_test_15",
+      "_type": "request",
+      "name": "15 - Download Music (PREMIUM)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/music/download/{{ _.music_id }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "description": "Faz download da m\u00fasica (usu\u00e1rio PREMIUM pode baixar todos os formatos).",
+      "parentId": "folder_test_complete"
+    },
+    {
+      "_id": "req_test_16",
+      "_type": "request",
+      "name": "16 - Try Duplicate Subscription (Should REJECT)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/transactions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"{{ _.user_id }}\",\n  \"subscriptionType\": \"BASIC\",\n  \"creditCardId\": {{ _.credit_card_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Tenta criar segunda assinatura. Deve ser REJEITADA (usu\u00e1rio j\u00e1 tem plano).",
+      "parentId": "folder_test_complete",
+      "afterResponseScript": "const body = JSON.parse(insomnia.response.body);\nif (body) {\n  if (body.status === 'REJECTED') {\n    console.log('CORRETO! Rejeitada:', body.fraudReason);\n  } else {\n    console.log('ERRO! Deveria ser rejeitada!');\n  }\n}"
+    },
+    {
+      "_id": "req_test_17",
+      "_type": "request",
+      "name": "17 - Summary - All Transactions",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/transactions",
+      "headers": [],
+      "description": "Visualiza todas as transa\u00e7\u00f5es do sistema (aprovadas e rejeitadas).",
+      "parentId": "folder_test_complete"
+    },
+    {
+      "_id": "req_test_18",
+      "_type": "request",
+      "name": "18 - Summary - User Playlists",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/playlists/user/{{ _.user_id }}",
+      "headers": [],
+      "description": "Lista todas as playlists do usu\u00e1rio.",
+      "parentId": "folder_test_complete"
     }
   ]
 }
