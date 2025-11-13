@@ -4,27 +4,21 @@ import edu.infnet.melodyhub.application.transaction.dto.CreateTransactionRequest
 import edu.infnet.melodyhub.application.transaction.dto.TransactionResponse
 import edu.infnet.melodyhub.domain.transaction.Transaction
 import edu.infnet.melodyhub.domain.transaction.TransactionRepository
-import edu.infnet.melodyhub.domain.user.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.util.*
+import java.util.UUID
 
 @Service
 class TransactionService(
     private val transactionRepository: TransactionRepository,
-    private val userRepository: UserRepository,
     private val antiFraudService: AntiFraudService,
     private val eventPublisher: edu.infnet.melodyhub.infrastructure.events.DomainEventPublisher
 ) {
 
     @Transactional
     fun createTransaction(request: CreateTransactionRequest): TransactionResponse {
-        // Validar se usuário existe
-        val user = userRepository.findById(request.userId)
-            ?: throw IllegalArgumentException("User not found with ID: ${request.userId}")
-
         // Obter valor da assinatura
         val amount = request.subscriptionType.monthlyPrice
 
@@ -40,80 +34,48 @@ class TransactionService(
         val fraudCheckResult = antiFraudService.validateTransaction(transaction)
 
         if (!fraudCheckResult.isValid) {
+            // Aggregate publica seu próprio evento de fraude
             transaction.reject(fraudCheckResult.reason ?: "Validação de antifraude falhou")
-
-            // Publicar evento de fraude detectada
-            publishFraudDetectedEvent(transaction, fraudCheckResult.reason)
         } else {
-            transaction.approve()
+            // Calcular novo role baseado no tipo de assinatura
+            val newRole = calculateNewRole(request.subscriptionType)
 
-            // Atualizar role do usuário baseado no plano
-            val newRole = updateUserRoleBasedOnSubscription(user, request.subscriptionType)
-
-            // Publicar evento de transação aprovada
-            publishTransactionApprovedEvent(transaction, newRole)
+            // Aggregate publica seu próprio evento de aprovação
+            // O evento será consumido pelo Account Context que atualizará o User
+            transaction.approve(newRole)
         }
+        val eventsToPublish = transaction.getEvents().toList()
 
         // Salvar transação
         val savedTransaction = transactionRepository.save(transaction)
 
-        // Publicar evento de transação validada
-        publishTransactionValidatedEvent(savedTransaction, fraudCheckResult)
+        // Registrar evento de validação (após ter ID salvo)
+        savedTransaction.recordValidation(fraudCheckResult.isValid, fraudCheckResult.reason)
+
+        // Coletar evento de validação
+        val validationEvents = savedTransaction.getAndClearEvents()
+
+        // Publicar TODOS os eventos (approve/reject + validated)
+        (eventsToPublish + validationEvents).forEach { event ->
+            eventPublisher.publish(event)
+        }
 
         return TransactionResponse.from(savedTransaction)
     }
 
-    private fun publishTransactionValidatedEvent(
-        transaction: Transaction,
-        fraudCheckResult: FraudCheckResult
-    ) {
-        val event = edu.infnet.melodyhub.domain.events.TransactionValidatedEvent(
-            transactionId = transaction.id,
-            userId = transaction.userId,
-            amount = transaction.amount,
-            subscriptionType = transaction.subscriptionType,
-            isValid = fraudCheckResult.isValid,
-            fraudReason = fraudCheckResult.reason
-        )
-        eventPublisher.publish(event)
-    }
-
-    private fun publishFraudDetectedEvent(transaction: Transaction, fraudReason: String?) {
-        val event = edu.infnet.melodyhub.domain.events.FraudDetectedEvent(
-            transactionId = transaction.id,
-            userId = transaction.userId,
-            fraudReason = fraudReason ?: "Motivo desconhecido",
-            violatedRules = listOf(fraudReason ?: "Regra desconhecida")
-        )
-        eventPublisher.publish(event)
-    }
-
-    private fun publishTransactionApprovedEvent(transaction: Transaction, newRole: edu.infnet.melodyhub.domain.user.UserRole) {
-        val event = edu.infnet.melodyhub.domain.events.TransactionApprovedEvent(
-            transactionId = transaction.id,
-            userId = transaction.userId,
-            subscriptionType = transaction.subscriptionType,
-            newUserRole = newRole
-        )
-        eventPublisher.publish(event)
-    }
-
-    private fun updateUserRoleBasedOnSubscription(
-        user: edu.infnet.melodyhub.domain.user.User,
-        subscriptionType: edu.infnet.melodyhub.domain.transaction.SubscriptionType
-    ): edu.infnet.melodyhub.domain.user.UserRole {
-        val newRole = when (subscriptionType) {
+    /**
+     * Calcula novo role baseado no tipo de assinatura.
+     * Lógica de domínio encapsulada no service.
+     */
+    private fun calculateNewRole(subscriptionType: edu.infnet.melodyhub.domain.transaction.SubscriptionType): edu.infnet.melodyhub.domain.user.UserRole {
+        return when (subscriptionType) {
             edu.infnet.melodyhub.domain.transaction.SubscriptionType.BASIC ->
                 edu.infnet.melodyhub.domain.user.UserRole.BASIC
             edu.infnet.melodyhub.domain.transaction.SubscriptionType.PREMIUM ->
                 edu.infnet.melodyhub.domain.user.UserRole.PREMIUM
         }
-
-        user.updateRole(newRole)
-        userRepository.save(user)
-
-        return newRole
     }
+
 
     fun getTransactionById(id: UUID): TransactionResponse {
         val transaction = transactionRepository.findById(id)
@@ -135,8 +97,7 @@ class TransactionService(
 @Service
 class AntiFraudService(
     private val transactionRepository: TransactionRepository,
-    private val creditCardRepository: edu.infnet.melodyhub.domain.creditcard.CreditCardRepository,
-    private val userRepository: UserRepository
+    private val creditCardRepository: edu.infnet.melodyhub.domain.creditcard.CreditCardRepository
 ) {
 
     fun validateTransaction(transaction: Transaction): FraudCheckResult {
@@ -220,13 +181,7 @@ class AntiFraudService(
         }
 
         // Regra 9: Validar se o cartão pertence ao usuário
-        val user = userRepository.findById(transaction.userId)
-            ?: return FraudCheckResult(
-                isValid = false,
-                reason = "Usuário não encontrado"
-            )
-
-        if (creditCard.userId != user.id) {
+        if (creditCard.userId != transaction.userId) {
             return FraudCheckResult(
                 isValid = false,
                 reason = "Cartão de crédito não pertence ao usuário"

@@ -1,11 +1,21 @@
 package edu.infnet.melodyhub.domain.user
 
+import edu.infnet.melodyhub.domain.events.UserSubscriptionUpgradedEvent
+import edu.infnet.melodyhub.domain.shared.AggregateRoot
 import jakarta.persistence.*
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import java.time.LocalDateTime
 import java.util.UUID
 
+/**
+ * Aggregate Root: Usuário (Account Context).
+ *
+ * Responsabilidades:
+ * - Gerenciar dados e credenciais do usuário
+ * - Controlar role/plano de assinatura
+ * - Publicar eventos quando assinatura muda
+ */
 @Entity
 @Table(name = "users")
 class User(
@@ -35,31 +45,32 @@ class User(
 
     @Column(nullable = false)
     var updatedAt: LocalDateTime = LocalDateTime.now()
-) {
-    fun updateName(newName: String) {
-        require(newName.isNotBlank()) { "Nome não pode ser vazio" }
-        this.name = newName
-        this.updatedAt = LocalDateTime.now()
-    }
+) : AggregateRoot() {
 
-    fun updateEmail(newEmail: String) {
-        require(newEmail.isNotBlank()) { "E-mail não pode ser vazio" }
-        require(newEmail.matches(Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"))) {
-            "E-mail deve ser válido"
-        }
-        this.email = newEmail
-        this.updatedAt = LocalDateTime.now()
-    }
+    /**
+     * Atualiza role do usuário e publica evento.
+     * Usado quando assinatura é adquirida via transação aprovada.
+     *
+     * Domain Event: UserSubscriptionUpgradedEvent
+     */
+    fun upgradeSubscription(newRole: UserRole) {
+        val userId = this.id ?: throw IllegalStateException("Cannot upgrade subscription of unsaved user")
 
-    fun updateRole(newRole: UserRole) {
+        val previousRole = this.role
         this.role = newRole
         this.updatedAt = LocalDateTime.now()
+
+        // ✅ User publica evento de upgrade
+        registerEvent(
+            UserSubscriptionUpgradedEvent(
+                userId = userId,
+                previousRole = previousRole,
+                newRole = newRole
+            )
+        )
     }
 
     fun isAdmin(): Boolean = role == UserRole.ADMIN
-    fun hasPremiumAccess(): Boolean = role == UserRole.PREMIUM || role == UserRole.ADMIN
-    fun hasBasicAccess(): Boolean = role == UserRole.BASIC || hasPremiumAccess()
-    fun hasNoPlan(): Boolean = role == UserRole.SEM_PLANO
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

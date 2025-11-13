@@ -25,6 +25,7 @@ class RabbitMQConfig {
         // Queues de exemplo (podem ser criadas por consumidores)
         const val FRAUD_DETECTION_QUEUE = "antifraud.fraud.detection"
         const val TRANSACTION_AUDIT_QUEUE = "antifraud.transaction.audit"
+        const val ACCOUNT_SUBSCRIPTION_QUEUE = "account.subscription.updates"
     }
 
     /**
@@ -84,6 +85,32 @@ class RabbitMQConfig {
             .bind(transactionAuditQueue)
             .to(eventsExchange)
             .with("antifraud.transaction.*")
+    }
+
+    /**
+     * Queue para atualizações de assinatura (Account Context).
+     * Consome eventos de transação aprovada para atualizar User.
+     */
+    @Bean
+    fun accountSubscriptionQueue(): Queue {
+        return QueueBuilder.durable(ACCOUNT_SUBSCRIPTION_QUEUE)
+            .withArgument("x-message-ttl", 86400000) // 24 horas
+            .build()
+    }
+
+    /**
+     * Binding: TransactionApprovedEvent vai para Account Context.
+     * Cross-context communication via events.
+     */
+    @Bean
+    fun accountSubscriptionBinding(
+        accountSubscriptionQueue: Queue,
+        eventsExchange: TopicExchange
+    ): Binding {
+        return BindingBuilder
+            .bind(accountSubscriptionQueue)
+            .to(eventsExchange)
+            .with("antifraud.transaction.approved")
     }
 
     /**
