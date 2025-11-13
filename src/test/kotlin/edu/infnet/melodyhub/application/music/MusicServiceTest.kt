@@ -48,23 +48,19 @@ class MusicServiceTest {
         val fileId = ObjectId()
 
         whenever(gridFsTemplate.store(any(), any(), any(), any())).thenReturn(fileId)
-        whenever(musicRepository.save(any())).thenAnswer { invocation ->
+
+        doAnswer { invocation ->
             val music = invocation.getArgument<Music>(0)
-            Music(
-                id = "generatedId",
-                fileName = music.fileName,
-                contentType = music.contentType,
-                size = music.size,
-                fileId = music.fileId
-            )
-        }
+            music.copy(id = "generatedId")
+        }.whenever(musicRepository).save(any())
 
         val result = musicService.uploadMusic(file)
 
         assertNotNull(result)
+        assertEquals("generatedId", result)
         verify(gridFsTemplate).store(any(), eq("song.mp3"), eq("audio/mpeg"), any())
         verify(musicRepository).save(argThat {
-            this is Music && this.fileName == "song.mp3" && this.contentType == "audio/mpeg"
+            this.fileName == "song.mp3" && this.contentType == "audio/mpeg"
         })
     }
 
@@ -74,14 +70,16 @@ class MusicServiceTest {
         val fileId = ObjectId()
 
         whenever(gridFsTemplate.store(any(), any(), any(), any())).thenReturn(fileId)
-        whenever(musicRepository.save(any())).thenAnswer { invocation ->
+
+        doAnswer { invocation ->
             val music = invocation.getArgument<Music>(0)
-            Music(id = "generatedId", fileName = music.fileName, contentType = music.contentType, size = music.size, fileId = music.fileId)
-        }
+            music.copy(id = "generatedId")
+        }.whenever(musicRepository).save(any())
 
         val result = musicService.uploadMusic(file)
 
         assertNotNull(result)
+        assertEquals("generatedId", result)
         verify(musicRepository).save(any())
     }
 
@@ -91,14 +89,16 @@ class MusicServiceTest {
         val fileId = ObjectId()
 
         whenever(gridFsTemplate.store(any(), any(), any(), any())).thenReturn(fileId)
-        whenever(musicRepository.save(any())).thenAnswer { invocation ->
+
+        doAnswer { invocation ->
             val music = invocation.getArgument<Music>(0)
-            Music(id = "generatedId", fileName = music.fileName, contentType = music.contentType, size = music.size, fileId = music.fileId)
-        }
+            music.copy(id = "generatedId")
+        }.whenever(musicRepository).save(any())
 
         val result = musicService.uploadMusic(file)
 
         assertNotNull(result)
+        assertEquals("generatedId", result)
         verify(musicRepository).save(any())
     }
 
@@ -108,14 +108,16 @@ class MusicServiceTest {
         val fileId = ObjectId()
 
         whenever(gridFsTemplate.store(any(), any(), any(), any())).thenReturn(fileId)
-        whenever(musicRepository.save(any())).thenAnswer { invocation ->
+
+        doAnswer { invocation ->
             val music = invocation.getArgument<Music>(0)
-            Music(id = "generatedId", fileName = music.fileName, contentType = music.contentType, size = music.size, fileId = music.fileId)
-        }
+            music.copy(id = "generatedId")
+        }.whenever(musicRepository).save(any())
 
         val result = musicService.uploadMusic(file)
 
         assertNotNull(result)
+        assertEquals("generatedId", result)
         verify(musicRepository).save(any())
     }
 
