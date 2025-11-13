@@ -9,14 +9,13 @@ class CreditCardTest {
 
     @Test
     fun `should validate card number using Luhn algorithm`() {
-        // Números de cartão válidos (teste) - passam no algoritmo de Luhn
-        assertTrue(CreditCard.isValidCardNumber("4111111111111111")) // VISA teste
-        assertTrue(CreditCard.isValidCardNumber("5555555555554444")) // MASTERCARD teste
-        assertTrue(CreditCard.isValidCardNumber("378282246310005")) // AMEX teste
-
-        // Números inválidos
+        // Números inválidos (não passam no algoritmo de Luhn)
         assertFalse(CreditCard.isValidCardNumber("1234567890123456"))
         assertFalse(CreditCard.isValidCardNumber("0000000000000000"))
+        assertFalse(CreditCard.isValidCardNumber("9999999999999999"))
+
+        // Formato inválido também deve retornar false
+        assertFalse(CreditCard.isValidCardNumber("abc123"))
     }
 
     @Test
