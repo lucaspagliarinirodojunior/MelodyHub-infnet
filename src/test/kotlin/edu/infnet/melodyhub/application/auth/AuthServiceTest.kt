@@ -145,7 +145,7 @@ class AuthServiceTest {
 
         val response = authService.me(token)
 
-        assertEquals(userId, response.id)
+        assertEquals(userId, response.userId)
         assertEquals("Test User", response.name)
         assertEquals("test@example.com", response.email)
         assertEquals(UserRole.PREMIUM, response.role)
