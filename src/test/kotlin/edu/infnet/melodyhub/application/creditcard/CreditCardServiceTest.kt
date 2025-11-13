@@ -198,7 +198,8 @@ class CreditCardServiceTest {
     fun `should throw exception for unknown card brand`() {
         val userId = UUID.randomUUID()
         val user = createValidUser(userId)
-        val dto = createValidCreditCardDTO(userId).copy(cardNumber = "9999999999999999")
+        // Número que passa no Luhn mas não tem bandeira reconhecida (começa com 8)
+        val dto = createValidCreditCardDTO(userId).copy(cardNumber = "8000000000000003")
 
         whenever(userRepository.findById(userId)).thenReturn(user)
 
