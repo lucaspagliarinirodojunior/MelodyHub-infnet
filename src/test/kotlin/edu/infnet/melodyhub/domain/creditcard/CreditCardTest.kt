@@ -11,11 +11,11 @@ class CreditCardTest {
     fun `should validate card number using Luhn algorithm`() {
         // Números inválidos (não passam no algoritmo de Luhn)
         assertFalse(CreditCard.isValidCardNumber("1234567890123456"))
-        assertFalse(CreditCard.isValidCardNumber("0000000000000000"))
         assertFalse(CreditCard.isValidCardNumber("9999999999999999"))
 
         // Formato inválido também deve retornar false
         assertFalse(CreditCard.isValidCardNumber("abc123"))
+        assertFalse(CreditCard.isValidCardNumber(""))
     }
 
     @Test
