@@ -369,7 +369,9 @@ class PlaylistServiceTest {
         val favoritesPlaylist = createTestPlaylist(playlistId, userId, "Favoritos", isDefault = true)
 
         whenever(playlistRepository.findByUserIdAndIsDefault(userId, true)).thenReturn(listOf(favoritesPlaylist))
+        whenever(playlistRepository.findById(playlistId)).thenReturn(favoritesPlaylist)
         whenever(playlistMusicRepository.findByPlaylistIdOrderByPosition(playlistId)).thenReturn(emptyList())
+        whenever(musicRepository.findAllById(any())).thenReturn(emptyList())
 
         val response = playlistService.getFavoritesPlaylist(userId)
 
@@ -386,6 +388,7 @@ class PlaylistServiceTest {
         val music = mock<Music>()
 
         whenever(playlistRepository.findByUserIdAndIsDefault(userId, true)).thenReturn(listOf(favoritesPlaylist))
+        whenever(playlistRepository.findById(playlistId)).thenReturn(favoritesPlaylist)
         whenever(userRepository.findById(userId)).thenReturn(createTestUser(userId))
         whenever(musicRepository.findById(musicId)).thenReturn(Optional.of(music))
         whenever(playlistMusicRepository.existsByPlaylistIdAndMusicId(playlistId, musicId)).thenReturn(false)
@@ -405,6 +408,7 @@ class PlaylistServiceTest {
         val playlistMusic = PlaylistMusic(UUID.randomUUID(), playlistId, musicId, 0)
 
         whenever(playlistRepository.findByUserIdAndIsDefault(userId, true)).thenReturn(listOf(favoritesPlaylist))
+        whenever(playlistRepository.findById(playlistId)).thenReturn(favoritesPlaylist)
         whenever(userRepository.findById(userId)).thenReturn(createTestUser(userId))
         whenever(playlistMusicRepository.findByPlaylistIdAndMusicId(playlistId, musicId)).thenReturn(playlistMusic)
         whenever(playlistMusicRepository.findByPlaylistIdOrderByPosition(playlistId)).thenReturn(emptyList())

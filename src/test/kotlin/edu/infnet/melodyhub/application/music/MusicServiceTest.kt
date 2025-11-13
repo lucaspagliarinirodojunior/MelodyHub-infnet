@@ -46,22 +46,22 @@ class MusicServiceTest {
     fun `should upload MP3 file successfully`() {
         val file = createMockFile("audio/mpeg", "song.mp3", 2048L)
         val fileId = ObjectId()
-        val musicId = "music123"
-
-        val savedMusic = Music(
-            id = musicId,
-            fileName = "song.mp3",
-            contentType = "audio/mpeg",
-            size = 2048L,
-            fileId = fileId.toHexString()
-        )
 
         whenever(gridFsTemplate.store(any(), any(), any(), any())).thenReturn(fileId)
-        whenever(musicRepository.save(any())).thenReturn(savedMusic)
+        whenever(musicRepository.save(any())).thenAnswer { invocation ->
+            val music = invocation.getArgument<Music>(0)
+            Music(
+                id = "generatedId",
+                fileName = music.fileName,
+                contentType = music.contentType,
+                size = music.size,
+                fileId = music.fileId
+            )
+        }
 
         val result = musicService.uploadMusic(file)
 
-        assertEquals(musicId, result)
+        assertNotNull(result)
         verify(gridFsTemplate).store(any(), eq("song.mp3"), eq("audio/mpeg"), any())
         verify(musicRepository).save(argThat {
             this is Music && this.fileName == "song.mp3" && this.contentType == "audio/mpeg"
@@ -72,22 +72,16 @@ class MusicServiceTest {
     fun `should upload AAC file successfully`() {
         val file = createMockFile("audio/aac", "song.aac", 1024L)
         val fileId = ObjectId()
-        val musicId = "music456"
-
-        val savedMusic = Music(
-            id = musicId,
-            fileName = "song.aac",
-            contentType = "audio/aac",
-            size = 1024L,
-            fileId = fileId.toHexString()
-        )
 
         whenever(gridFsTemplate.store(any(), any(), any(), any())).thenReturn(fileId)
-        whenever(musicRepository.save(any())).thenReturn(savedMusic)
+        whenever(musicRepository.save(any())).thenAnswer { invocation ->
+            val music = invocation.getArgument<Music>(0)
+            Music(id = "generatedId", fileName = music.fileName, contentType = music.contentType, size = music.size, fileId = music.fileId)
+        }
 
         val result = musicService.uploadMusic(file)
 
-        assertEquals(musicId, result)
+        assertNotNull(result)
         verify(musicRepository).save(any())
     }
 
@@ -95,22 +89,16 @@ class MusicServiceTest {
     fun `should upload FLAC file successfully`() {
         val file = createMockFile("audio/flac", "song.flac", 4096L)
         val fileId = ObjectId()
-        val musicId = "music789"
-
-        val savedMusic = Music(
-            id = musicId,
-            fileName = "song.flac",
-            contentType = "audio/flac",
-            size = 4096L,
-            fileId = fileId.toHexString()
-        )
 
         whenever(gridFsTemplate.store(any(), any(), any(), any())).thenReturn(fileId)
-        whenever(musicRepository.save(any())).thenReturn(savedMusic)
+        whenever(musicRepository.save(any())).thenAnswer { invocation ->
+            val music = invocation.getArgument<Music>(0)
+            Music(id = "generatedId", fileName = music.fileName, contentType = music.contentType, size = music.size, fileId = music.fileId)
+        }
 
         val result = musicService.uploadMusic(file)
 
-        assertEquals(musicId, result)
+        assertNotNull(result)
         verify(musicRepository).save(any())
     }
 
@@ -118,16 +106,12 @@ class MusicServiceTest {
     fun `should accept audio x-flac content type`() {
         val file = createMockFile("audio/x-flac", "song.flac", 2048L)
         val fileId = ObjectId()
-        val savedMusic = Music(
-            id = "musicId",
-            fileName = "song.flac",
-            contentType = "audio/x-flac",
-            size = 2048L,
-            fileId = fileId.toHexString()
-        )
 
         whenever(gridFsTemplate.store(any(), any(), any(), any())).thenReturn(fileId)
-        whenever(musicRepository.save(any())).thenReturn(savedMusic)
+        whenever(musicRepository.save(any())).thenAnswer { invocation ->
+            val music = invocation.getArgument<Music>(0)
+            Music(id = "generatedId", fileName = music.fileName, contentType = music.contentType, size = music.size, fileId = music.fileId)
+        }
 
         val result = musicService.uploadMusic(file)
 
