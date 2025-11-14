@@ -7,6 +7,7 @@ import edu.infnet.melodyhub.domain.user.UserRole
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.*
 import org.springframework.http.HttpStatus
 import java.util.*

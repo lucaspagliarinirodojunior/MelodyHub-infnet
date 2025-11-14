@@ -26,6 +26,7 @@ class CreditCardControllerTest {
     private fun createCreditCardResponse(
         id: Long = 1L,
         userId: UUID = UUID.randomUUID(),
+        cardNumber: String = "4111111111111111",
         status: CreditCardStatus = CreditCardStatus.ACTIVE
     ): CreditCardResponseDTO {
         return CreditCardResponseDTO(

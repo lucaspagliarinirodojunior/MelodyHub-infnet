@@ -311,7 +311,7 @@ class PlaylistServiceTest {
         playlistService.addMusicToPlaylist(playlistId, userId, request)
 
         verify(playlistMusicRepository).save(argThat {
-            this.musicId == musicId && this.position == 0
+            this is PlaylistMusic && this.musicId == musicId && this.position == 0
         })
     }
 

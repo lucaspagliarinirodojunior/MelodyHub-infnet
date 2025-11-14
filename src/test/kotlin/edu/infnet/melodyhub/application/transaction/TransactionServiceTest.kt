@@ -89,7 +89,7 @@ class TransactionServiceTest {
         assertNotNull(response)
         assertEquals(TransactionStatus.REJECTED, response.status)
         assertNotNull(response.fraudReason)
-        assertTrue(response.fraudReason!!.contains("Alta frequência") || response.fraudReason.contains("detectada"))
+        assertTrue(response.fraudReason!!.contains("Alta frequência") || response.fraudReason!!.contains("detectada"))
         verify(transactionRepository).save(any())
     }
 
