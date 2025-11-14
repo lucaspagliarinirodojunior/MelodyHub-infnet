@@ -1,124 +1,227 @@
 # MelodyHub - Arquitetura DDD e Observabilidade
 
-API de streaming de música construída com **Spring Boot 3.3.0** e **Kotlin**, aplicando Domain-Driven Design (DDD), Clean Architecture e SOLID. Sistema acadêmico demonstrando implementação rigorosa de padrões táticos e estratégicos de DDD.
+API de streaming de música construída com **Spring Boot 3.3.0** e **Kotlin**, aplicando Domain-Driven Design (DDD), Clean Architecture e SOLID.
 
 ## Stack Tecnológica
 
-- **Backend**: Spring Boot 3.3.0, Kotlin, JDK 17
-- **Databases**: PostgreSQL (relacional), MongoDB (GridFS para arquivos)
-- **Mensageria**: RabbitMQ (Domain Events)
-- **Observabilidade**: ELK Stack (Elasticsearch, Logstash, Kibana)
-- **Segurança**: JWT, BCrypt
-- **Conteinerização**: Docker Compose
+```mermaid
+graph LR
+    A[Spring Boot 3.3.0] --> B[Kotlin + JDK 17]
+    A --> C[PostgreSQL]
+    A --> D[MongoDB GridFS]
+    A --> E[RabbitMQ]
+    A --> F[ELK Stack]
+
+    F --> F1[Elasticsearch]
+    F --> F2[Logstash]
+    F --> F3[Kibana]
+
+    style A fill:#6db33f
+    style E fill:#ff6600
+    style F fill:#005571
+```
 
 ---
 
-## Arquitetura em Camadas (DDD + Clean Architecture)
+## Arquitetura em Camadas (Clean Architecture + DDD)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ INFRASTRUCTURE LAYER (Detalhes técnicos)                    │
-│ • Controllers REST                                           │
-│ • Repository Implementations (JPA/MongoDB adapters)         │
-│ • Security (JWT, Filters)                                   │
-│ • Observability (MDC, Logging Filters, Event Listeners)     │
-│ • Event Publisher (RabbitMQ)                                │
-└────────────────┬────────────────────────────────────────────┘
-                 │ depende
-                 ▼
-┌─────────────────────────────────────────────────────────────┐
-│ APPLICATION LAYER (Casos de uso)                            │
-│ • Services (UserService, TransactionService, AuthService)   │
-│ • DTOs (Request/Response)                                   │
-│ • Domain Services (AntiFraudService)                        │
-└────────────────┬────────────────────────────────────────────┘
-                 │ depende
-                 ▼
-┌─────────────────────────────────────────────────────────────┐
-│ DOMAIN LAYER (Regras de negócio puras)                     │
-│ • Aggregates (User, Transaction, Music, Playlist)           │
-│ • Value Objects (UserRole, SubscriptionType, etc)          │
-│ • Repository Interfaces (inversão de dependência)           │
-│ • Domain Events (TransactionApproved, FraudDetected, etc)  │
-│ • AggregateRoot base class                                  │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Infrastructure["🔧 INFRASTRUCTURE LAYER"]
+        I1[REST Controllers]
+        I2[JPA/MongoDB Repositories]
+        I3[JWT Security]
+        I4[RabbitMQ Publisher]
+        I5[Observability Filters]
+    end
+
+    subgraph Application["💼 APPLICATION LAYER"]
+        A1[UserService]
+        A2[TransactionService]
+        A3[AntiFraudService]
+        A4[AuthService]
+        A5[DTOs]
+    end
+
+    subgraph Domain["🎯 DOMAIN LAYER - Puro"]
+        D1[User Aggregate]
+        D2[Transaction Aggregate]
+        D3[Music Aggregate]
+        D4[Playlist Aggregate]
+        D5[Domain Events]
+        D6[Repository Interfaces]
+    end
+
+    Infrastructure -->|depende| Application
+    Application -->|depende| Domain
+
+    style Domain fill:#4CAF50
+    style Application fill:#2196F3
+    style Infrastructure fill:#FF9800
 ```
 
-**Princípio**: Dependência sempre aponta para dentro. Domain é puro, sem dependências externas.
+**Princípio**: Dependências sempre apontam para dentro. Domain é puro, sem frameworks.
 
 ---
 
-## Domain Layer - Implementação DDD
+## Event Storm - Identificação de Domínios
 
-### Aggregates e Aggregate Root
+```mermaid
+graph TD
+    subgraph ES["Event Storm - Fluxo de Negócio"]
+        E1[Usuário se Registra] -->|UserCreated| E2[Usuário Faz Login]
+        E2 -->|UserAuthenticated| E3[Adiciona Cartão]
+        E3 -->|CreditCardAdded| E4[Cria Transação]
+        E4 -->|TransactionCreated| E5{AntiFraud Valida}
 
-Cada Aggregate Root gerencia um cluster de entidades relacionadas e garante invariantes de negócio.
+        E5 -->|Aprovado| E6[TransactionApproved]
+        E5 -->|Rejeitado| E7[FraudDetected]
 
-**Exemplo: Transaction Aggregate**
+        E6 -->|Upgrade Role| E8[UserSubscriptionUpgraded]
+        E8 --> E9[Usuário Acessa Músicas]
+        E9 -->|MusicStreamed| E10[Cria Playlists]
+        E10 -->|PlaylistCreated| E11[Adiciona Favoritos]
+    end
+
+    style E5 fill:#ff9800
+    style E6 fill:#4caf50
+    style E7 fill:#f44336
+```
+
+### Domínios Identificados (5 Bounded Contexts)
+
+```mermaid
+graph LR
+    subgraph Account["👤 ACCOUNT CONTEXT"]
+        U[User Aggregate]
+        UR[UserRole VO]
+    end
+
+    subgraph Payment["💳 PAYMENT CONTEXT"]
+        T[Transaction Aggregate]
+        CC[CreditCard Aggregate]
+        ST[SubscriptionType VO]
+    end
+
+    subgraph AntiFraud["🛡️ ANTIFRAUD CONTEXT"]
+        AF[AntiFraudService]
+        FR[10 Regras de Validação]
+    end
+
+    subgraph Catalog["🎵 CATALOG CONTEXT"]
+        M[Music Aggregate]
+        MR[MusicRepository]
+    end
+
+    subgraph Playlist["📝 PLAYLIST CONTEXT"]
+        P[Playlist Aggregate]
+        PM[PlaylistMusic Entity]
+    end
+
+    Payment -->|valida com| AntiFraud
+    Payment -->|atualiza role| Account
+    Account -->|controla acesso| Catalog
+    Catalog -->|fornece músicas| Playlist
+
+    style Account fill:#2196f3
+    style Payment fill:#ff9800
+    style AntiFraud fill:#f44336
+    style Catalog fill:#4caf50
+    style Playlist fill:#9c27b0
+```
+
+---
+
+## Context Map - Relacionamentos entre Contextos
+
+```mermaid
+graph TB
+    Account[Account Context<br/>Core Domain]
+
+    Account -->|Customer-Supplier| Payment[Payment Context]
+    Account -->|Customer-Supplier| Playlist[Playlist Context]
+    Account -->|Conformist| Catalog[Catalog Context]
+
+    Payment <-->|Partnership| AntiFraud[AntiFraud Context]
+    Payment -.->|Side Effect<br/>atualiza role| Account
+
+    Catalog -->|Customer-Supplier| Playlist
+
+    AntiFraud -.->|Domain Events<br/>via RabbitMQ| EventBus((🐰))
+
+    style Account fill:#2196f3,color:#fff
+    style Payment fill:#ff9800,color:#fff
+    style AntiFraud fill:#f44336,color:#fff
+    style EventBus fill:#ff6600,color:#fff
+```
+
+**Padrões Aplicados**:
+- **Customer-Supplier**: Account fornece dados para Payment/Playlist
+- **Partnership**: Payment e AntiFraud colaboram bidirecionalmente
+- **Conformist**: Catalog se conforma às regras de UserRole do Account
+- **Domain Events**: Comunicação assíncrona via RabbitMQ
+
+---
+
+## Aggregate Root - Domain Events
+
+```mermaid
+sequenceDiagram
+    participant S as TransactionService
+    participant T as Transaction Aggregate
+    participant E as Event Collection
+    participant P as DomainEventPublisher
+    participant R as RabbitMQ
+
+    S->>T: createTransaction()
+    T->>T: validateInvariants()
+
+    alt Aprovado
+        T->>T: approve(newRole)
+        T->>E: registerEvent(TransactionApprovedEvent)
+    else Rejeitado
+        T->>T: reject(reason)
+        T->>E: registerEvent(FraudDetectedEvent)
+    end
+
+    S->>T: save(transaction)
+    S->>T: getAndClearEvents()
+    T-->>S: List<DomainEvent>
+
+    S->>P: publish(events)
+    P->>R: send to exchange
+
+    Note over T,E: Aggregate coleta eventos<br/>sem publicar diretamente
+    Note over S,P: Service publica após<br/>commit bem-sucedido
+```
+
+### Exemplo de Aggregate Root
 
 ```kotlin
 @Entity
-@Table(name = "transactions")
 class Transaction(
-    @Id val id: UUID = UUID.randomUUID(),
-    @Column(nullable = false) val userId: UUID,
-    @Column(nullable = false) val amount: BigDecimal,
-    @Column(nullable = false) @Enumerated(EnumType.STRING)
-    val subscriptionType: SubscriptionType,
-    @Column(nullable = false) val creditCardId: Long,
-    @Column(nullable = false) @Enumerated(EnumType.STRING)
-    var status: TransactionStatus = TransactionStatus.PENDING,
-    @Column var fraudReason: String? = null,
-    @Column(nullable = false) val createdAt: LocalDateTime = LocalDateTime.now(),
-    @Column(nullable = false) var updatedAt: LocalDateTime = LocalDateTime.now()
+    val userId: UUID,
+    val amount: BigDecimal,
+    var status: TransactionStatus = PENDING
 ) : AggregateRoot() {
 
-    // ✅ Método de domínio: encapsula lógica e publica evento
+    // ✅ Método de domínio rico: protege invariantes + registra evento
     fun approve(newUserRole: UserRole) {
-        require(status == TransactionStatus.PENDING) {
-            "Only pending transactions can be approved"
-        }
-        status = TransactionStatus.APPROVED
-        updatedAt = LocalDateTime.now()
+        require(status == PENDING) { "Only pending can be approved" }
 
-        // Aggregate registra seu próprio evento
+        status = APPROVED
         registerEvent(
             TransactionApprovedEvent(
                 transactionId = id,
                 userId = userId,
-                subscriptionType = subscriptionType,
                 newUserRole = newUserRole
-            )
-        )
-    }
-
-    fun reject(reason: String) {
-        require(status == TransactionStatus.PENDING) {
-            "Only pending transactions can be rejected"
-        }
-        status = TransactionStatus.REJECTED
-        fraudReason = reason
-        updatedAt = LocalDateTime.now()
-
-        registerEvent(
-            FraudDetectedEvent(
-                transactionId = id,
-                userId = userId,
-                fraudReason = reason,
-                violatedRules = listOf(reason)
             )
         )
     }
 }
 ```
 
-**Características**:
-- Métodos `approve()` e `reject()` protegem invariantes (só transações PENDING podem mudar de estado)
-- Eventos de domínio são registrados internamente via `AggregateRoot.registerEvent()`
-- Lógica de negócio encapsulada no aggregate, não vazada para services
-
-### AggregateRoot Base Class
-
+**Base Class**:
 ```kotlin
 abstract class AggregateRoot {
     @Transient
@@ -136,218 +239,59 @@ abstract class AggregateRoot {
 }
 ```
 
-**Pattern**: Aggregate coleta eventos durante operações de negócio. Application Layer publica os eventos **após** persistir com sucesso.
-
-### Value Objects
-
-```kotlin
-enum class SubscriptionType(val monthlyPrice: BigDecimal) {
-    BASIC(BigDecimal("9.90")),
-    PREMIUM(BigDecimal("19.90"))
-}
-
-enum class UserRole {
-    SEM_PLANO,  // Usuário sem plano
-    BASIC,      // Plano básico
-    PREMIUM,    // Plano premium
-    ADMIN       // Administrador (upload de músicas)
-}
-
-enum class TransactionStatus {
-    PENDING,
-    APPROVED,
-    REJECTED
-}
-```
-
-**Vantagem**: Encapsula regras (ex: `SubscriptionType` conhece seu preço), type-safe, imutável.
-
-### Repository Pattern (Inversão de Dependência)
-
-**Interface no Domain:**
-
-```kotlin
-// domain/transaction/TransactionRepository.kt
-interface TransactionRepository {
-    fun save(transaction: Transaction): Transaction
-    fun findById(id: UUID): Transaction?
-    fun findAll(): List<Transaction>
-    fun findByUserId(userId: UUID): List<Transaction>
-    fun countByUserIdAndCreatedAtAfter(userId: UUID, after: LocalDateTime): Long
-    fun findApprovedByUserId(userId: UUID): List<Transaction>
-}
-```
-
-**Implementação na Infrastructure:**
-
-```kotlin
-// infrastructure/transaction/JpaTransactionRepository.kt
-interface JpaTransactionRepository : JpaRepository<Transaction, UUID> {
-    fun findByUserId(userId: UUID): List<Transaction>
-    fun countByUserIdAndCreatedAtAfter(userId: UUID, after: LocalDateTime): Long
-    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId AND t.status = 'APPROVED'")
-    fun findApprovedByUserId(@Param("userId") userId: UUID): List<Transaction>
-}
-
-// infrastructure/transaction/TransactionRepositoryImpl.kt
-@Component
-class TransactionRepositoryImpl(
-    private val jpaRepository: JpaTransactionRepository
-) : TransactionRepository {
-    override fun save(transaction: Transaction) = jpaRepository.save(transaction)
-    override fun findById(id: UUID) = jpaRepository.findById(id).orElse(null)
-    override fun findAll() = jpaRepository.findAll()
-    override fun findByUserId(userId: UUID) = jpaRepository.findByUserId(userId)
-    // ... outras implementações
-}
-```
-
-**Benefício**: Domain não conhece JPA. Fácil trocar persistência (ex: MongoDB) sem afetar domain.
-
 ---
 
-## Application Layer - Casos de Uso
+## Domain Events via RabbitMQ
 
-### Application Services
+```mermaid
+graph LR
+    subgraph Aggregates
+        T[Transaction] -->|approve| E1[TransactionApprovedEvent]
+        T -->|reject| E2[FraudDetectedEvent]
+        U[User] -->|upgradeSubscription| E3[UserSubscriptionUpgradedEvent]
+    end
 
-Orquestram operações de domínio, validam regras de negócio, coordenam aggregates.
+    subgraph Publisher
+        P[DomainEventPublisher]
+    end
 
-**Exemplo: TransactionService**
+    subgraph RabbitMQ
+        EX[melodyhub.events<br/>Topic Exchange]
 
-```kotlin
-@Service
-class TransactionService(
-    private val transactionRepository: TransactionRepository,
-    private val antiFraudService: AntiFraudService,
-    private val eventPublisher: DomainEventPublisher,
-    private val userContextEnricher: UserContextEnricher
-) {
-    private val logger = LoggerFactory.getLogger(TransactionService::class.java)
+        Q1[transaction.approved.queue]
+        Q2[fraud.detected.queue]
+        Q3[user.subscription.upgraded.queue]
+        Q4[transaction.validated.queue]
+    end
 
-    @Transactional
-    fun createTransaction(request: CreateTransactionRequest): TransactionResponse {
-        // 1. Logging de operação de negócio
-        logger.info("Creating transaction: userId={}, subscriptionType={}",
-            request.userId, request.subscriptionType)
+    subgraph Consumers
+        L[DomainEventLogger]
+        A[Audit Service]
+        N[Notification Service]
+    end
 
-        // 2. Enriquecer contexto MDC para logs
-        userContextEnricher.enrichWithUserContext(request.userId.toString(), null, null)
+    E1 --> P
+    E2 --> P
+    E3 --> P
 
-        // 3. Criar aggregate
-        val transaction = Transaction(
-            userId = request.userId,
-            amount = request.subscriptionType.monthlyPrice,
-            subscriptionType = request.subscriptionType,
-            creditCardId = request.creditCardId
-        )
+    P --> EX
 
-        // 4. Validar com Domain Service
-        val fraudCheckResult = antiFraudService.validateTransaction(transaction)
+    EX -->|transaction.approved| Q1
+    EX -->|fraud.detected| Q2
+    EX -->|user.subscription.upgraded| Q3
+    EX -->|transaction.validated| Q4
 
-        // 5. Aggregate decide seu estado baseado na validação
-        if (!fraudCheckResult.isValid) {
-            logger.warn("Transaction rejected: reason={}", fraudCheckResult.reason)
-            transaction.reject(fraudCheckResult.reason ?: "Fraud validation failed")
-        } else {
-            val newRole = calculateNewRole(request.subscriptionType)
-            transaction.approve(newRole)
-        }
+    Q1 --> L
+    Q2 --> L
+    Q3 --> L
+    Q4 --> L
 
-        // 6. Coletar eventos antes de salvar
-        val eventsToPublish = transaction.getEvents().toList()
+    Q2 --> A
+    Q1 --> N
 
-        // 7. Persistir
-        val savedTransaction = transactionRepository.save(transaction)
-
-        // 8. Registrar evento adicional (após ter ID)
-        savedTransaction.recordValidation(fraudCheckResult.isValid, fraudCheckResult.reason)
-        val validationEvents = savedTransaction.getAndClearEvents()
-
-        // 9. Publicar eventos via RabbitMQ
-        (eventsToPublish + validationEvents).forEach { event ->
-            eventPublisher.publish(event)
-        }
-
-        return TransactionResponse.from(savedTransaction)
-    }
-}
+    style EX fill:#ff6600,color:#fff
+    style L fill:#005571,color:#fff
 ```
-
-**Padrão**: Service coordena, Aggregate decide. Eventos publicados após commit bem-sucedido.
-
-### Domain Services
-
-Lógica de domínio que não pertence a um único aggregate.
-
-**Exemplo: AntiFraudService (10 regras de validação)**
-
-```kotlin
-@Service
-class AntiFraudService(
-    private val transactionRepository: TransactionRepository,
-    private val creditCardRepository: CreditCardRepository
-) {
-    private val logger = LoggerFactory.getLogger(AntiFraudService::class.java)
-
-    fun validateTransaction(transaction: Transaction): FraudCheckResult {
-        // Regra 1: Valor positivo
-        if (transaction.amount <= BigDecimal.ZERO) {
-            return FraudCheckResult(false, "Valor deve ser positivo")
-        }
-
-        // Regra 2: Limite máximo (R$ 100)
-        if (transaction.amount > BigDecimal("100.00")) {
-            return FraudCheckResult(false, "Valor excede limite de R$ 100,00")
-        }
-
-        // Regra 3: Alta frequência (> 3 em 2 minutos)
-        val twoMinutesAgo = LocalDateTime.now().minusMinutes(2)
-        val recentCount = transactionRepository
-            .countByUserIdAndCreatedAtAfter(transaction.userId, twoMinutesAgo)
-
-        if (recentCount >= 3) {
-            logger.warn("High frequency detected: count={}", recentCount)
-            return FraudCheckResult(false, "Alta frequência: mais de 3 em 2 minutos")
-        }
-
-        // Regra 4-10: Duplicação, limite diário, validação de cartão, etc...
-
-        return FraudCheckResult(true, null)
-    }
-}
-
-data class FraudCheckResult(val isValid: Boolean, val reason: String?)
-```
-
----
-
-## Domain Events - Comunicação Assíncrona
-
-### Bounded Contexts e Context Map
-
-```
-┌─────────────┐
-│   Account   │ (User aggregate)
-└──────┬──────┘
-       │ supplies
-       ├──────────────────────┐
-       ▼                      ▼
-┌──────────────┐      ┌──────────────┐
-│   Payment    │      │   Catalog    │
-│ (Transaction)│      │   (Music)    │
-└──────┬───────┘      └──────────────┘
-       │
-       │ partnership
-       ▼
-┌──────────────┐
-│  AntiFraud   │
-│  (Service)   │
-└──────────────┘
-```
-
-### Domain Events via RabbitMQ
-
-**Exchange**: `melodyhub.events` (Topic)
 
 **Routing Keys**:
 - `transaction.approved` → TransactionApprovedEvent
@@ -355,365 +299,220 @@ data class FraudCheckResult(val isValid: Boolean, val reason: String?)
 - `user.subscription.upgraded` → UserSubscriptionUpgradedEvent
 - `transaction.validated` → TransactionValidatedEvent
 
-**Fluxo de Evento**:
+---
 
-```
-1. Transaction.approve() registra TransactionApprovedEvent
-2. TransactionService persiste Transaction
-3. TransactionService coleta eventos via getAndClearEvents()
-4. DomainEventPublisher publica no RabbitMQ
-5. DomainEventLogger (listener) recebe e loga para ELK
-6. Outros consumidores podem reagir (ex: enviar email, atualizar CRM)
-```
+## Anti-Fraud Service - 10 Regras de Validação
 
-**Benefícios**:
-- Desacoplamento temporal entre contextos
-- Auditoria completa (todos eventos persistidos)
-- Extensibilidade (novos consumidores sem mudar código)
-- Rastreabilidade (trace ID propagado)
+```mermaid
+graph TD
+    Start([Nova Transação]) --> R1{Valor > 0?}
+    R1 -->|Não| Reject1[❌ Rejeitar:<br/>Valor inválido]
+    R1 -->|Sim| R2{Valor ≤ R$ 100?}
+
+    R2 -->|Não| Reject2[❌ Rejeitar:<br/>Excede limite]
+    R2 -->|Sim| R3{Alta frequência?<br/>> 3 em 2min}
+
+    R3 -->|Sim| Reject3[❌ Rejeitar:<br/>Alta frequência]
+    R3 -->|Não| R4{Duplicada?<br/>Mesmo valor em 2min}
+
+    R4 -->|Sim| Reject4[❌ Rejeitar:<br/>Transação duplicada]
+    R4 -->|Não| R5{Limite diário?<br/>> 5 hoje}
+
+    R5 -->|Sim| Reject5[❌ Rejeitar:<br/>Limite diário excedido]
+    R5 -->|Não| R6{Cartão existe?}
+
+    R6 -->|Não| Reject6[❌ Rejeitar:<br/>Cartão não encontrado]
+    R6 -->|Sim| R7{Cartão ativo?}
+
+    R7 -->|Não| Reject7[❌ Rejeitar:<br/>Cartão inativo]
+    R7 -->|Sim| R8{Cartão expirado?}
+
+    R8 -->|Sim| Reject8[❌ Rejeitar:<br/>Cartão expirado]
+    R8 -->|Não| R9{Cartão do usuário?}
+
+    R9 -->|Não| Reject9[❌ Rejeitar:<br/>Cartão não pertence]
+    R9 -->|Sim| R10{Já tem plano ativo?}
+
+    R10 -->|Sim| Reject10[❌ Rejeitar:<br/>Plano já ativo]
+    R10 -->|Não| Approve[✅ Aprovar Transação]
+
+    style Approve fill:#4caf50,color:#fff
+    style Reject1 fill:#f44336,color:#fff
+    style Reject2 fill:#f44336,color:#fff
+    style Reject3 fill:#f44336,color:#fff
+    style Reject4 fill:#f44336,color:#fff
+    style Reject5 fill:#f44336,color:#fff
+    style Reject6 fill:#f44336,color:#fff
+    style Reject7 fill:#f44336,color:#fff
+    style Reject8 fill:#f44336,color:#fff
+    style Reject9 fill:#f44336,color:#fff
+    style Reject10 fill:#f44336,color:#fff
+```
 
 ---
 
-## Observabilidade - Sistema de Logs (ELK Stack)
+## Observabilidade - Sistema de Logs por Camada DDD
 
-### Arquitetura de Logging por Camada DDD
+```mermaid
+graph TB
+    subgraph Domain["🎯 DOMAIN LAYER"]
+        D1[User.upgradeSubscription]
+        D2[Transaction.approve]
+        D3[Transaction.reject]
+        D1 -.->|registra| E1[Domain Events]
+        D2 -.->|registra| E1
+        D3 -.->|registra| E1
+    end
 
-```
-DOMAIN LAYER
-├─ Sem logging direto
-└─ Publica Domain Events
+    subgraph Application["💼 APPLICATION LAYER"]
+        A1[TransactionService:<br/>logger.info creation]
+        A2[AntiFraudService:<br/>logger.warn violations]
+        A3[AuthService:<br/>logger.info login attempts]
+        A4[UserContextEnricher:<br/>enrichWithUserContext]
+    end
 
-APPLICATION LAYER
-├─ Logs de casos de uso
-├─ AuthService: login attempts (success/failure)
-├─ TransactionService: transaction creation
-├─ AntiFraudService: fraud detection (each rule)
-└─ UserService: user operations
+    subgraph Infrastructure["🔧 INFRASTRUCTURE LAYER"]
+        I1[MdcFilter:<br/>traceId, requestUri]
+        I2[RequestLoggingFilter:<br/>HTTP req/res, latency]
+        I3[DomainEventLogger:<br/>@RabbitListener]
+    end
 
-INFRASTRUCTURE LAYER
-├─ MdcFilter: trace ID, request context
-├─ RequestLoggingFilter: HTTP req/res, latency
-├─ DomainEventLogger: escuta eventos e loga
-└─ UserContextEnricher: enriquece MDC
+    subgraph Logback["📝 LOGBACK"]
+        L1[JSON Encoder]
+        L2[Async Appender]
+        L3[/var/log/melodyhub/melodyhub.json]
+    end
+
+    subgraph ELK["📊 ELK STACK"]
+        E2[Logstash:<br/>parse, tag, enrich]
+        E3[Elasticsearch:<br/>index melodyhub-*]
+        E4[Kibana:<br/>visualize, search]
+    end
+
+    E1 -->|publicado via RabbitMQ| I3
+    A1 --> L1
+    A2 --> L1
+    A3 --> L1
+    I1 --> L1
+    I2 --> L1
+    I3 --> L1
+
+    L1 --> L2
+    L2 --> L3
+    L3 --> E2
+    E2 --> E3
+    E3 --> E4
+
+    style Domain fill:#4CAF50,color:#fff
+    style Application fill:#2196F3,color:#fff
+    style Infrastructure fill:#FF9800,color:#fff
+    style ELK fill:#005571,color:#fff
 ```
 
 ### Componentes de Observabilidade
 
-#### 1. MdcFilter - Rastreamento Distribuído
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant M as MdcFilter
+    participant R as RequestLoggingFilter
+    participant S as TransactionService
+    participant E as UserContextEnricher
+    participant L as Logger
 
-```kotlin
-@Component
-@Order(1)
-class MdcFilter : OncePerRequestFilter() {
-    override fun doFilterInternal(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-        filterChain: FilterChain
-    ) {
-        try {
-            // Gera trace ID único
-            val traceId = UUID.randomUUID().toString()
-            MDC.put("traceId", traceId)
+    C->>M: HTTP Request
+    M->>M: Generate traceId
+    M->>M: MDC.put("traceId", uuid)
+    M->>M: MDC.put("requestUri", uri)
 
-            // Contexto HTTP
-            MDC.put("requestUri", request.requestURI)
-            MDC.put("requestMethod", request.method)
+    M->>R: doFilter()
+    R->>R: Start timer
 
-            // Propaga trace ID via header
-            response.addHeader("X-Trace-Id", traceId)
+    R->>S: createTransaction()
+    S->>E: enrichWithUserContext(userId)
+    E->>E: MDC.put("userId", id)
 
-            filterChain.doFilter(request, response)
-        } finally {
-            MDC.clear()  // Evita memory leak em thread pools
-        }
-    }
-}
+    S->>L: logger.info("Creating transaction")
+    Note over L: Log inclui automaticamente:<br/>traceId, userId, requestUri
+
+    S-->>R: TransactionResponse
+    R->>R: Stop timer, calc duration
+    R->>L: logger.info("HTTP Response", duration)
+
+    R-->>C: Response + X-Trace-Id header
 ```
 
-#### 2. UserContextEnricher - Contexto de Negócio
+### MDC Context - Campos Automáticos
 
-```kotlin
-@Component
-class UserContextEnricher {
-    fun enrichWithUserContext(userId: String?, email: String?, role: String?) {
-        userId?.let { MDC.put("userId", it) }
-        email?.let { MDC.put("userEmail", it) }
-        role?.let { MDC.put("userRole", it) }
-    }
-
-    fun enrichWithTransactionContext(transactionId: String) {
-        MDC.put("transactionId", transactionId)
-    }
-
-    fun enrichWithEventContext(eventType: String) {
-        MDC.put("eventType", eventType)
-    }
-}
-```
-
-**Uso no Application Service**:
-
-```kotlin
-@Service
-class TransactionService(
-    private val userContextEnricher: UserContextEnricher
-) {
-    fun createTransaction(request: CreateTransactionRequest): TransactionResponse {
-        // Enriquece MDC - todos os logs seguintes terão userId
-        userContextEnricher.enrichWithUserContext(request.userId.toString(), null, null)
-
-        logger.info("Creating transaction")  // Log terá userId automaticamente
-
-        val transaction = Transaction(...)
-        val saved = transactionRepository.save(transaction)
-
-        // Adiciona transactionId ao contexto
-        userContextEnricher.enrichWithTransactionContext(saved.id.toString())
-
-        logger.info("Transaction saved")  // Log terá userId + transactionId
-    }
-}
-```
-
-#### 3. DomainEventLogger - Observando Eventos de Domínio
-
-```kotlin
-@Component
-class DomainEventLogger(
-    private val userContextEnricher: UserContextEnricher
-) {
-    private val logger = LoggerFactory.getLogger(DomainEventLogger::class.java)
-
-    @RabbitListener(queues = ["transaction.approved.queue"])
-    fun onTransactionApproved(event: TransactionApprovedEvent) {
-        userContextEnricher.enrichWithEventContext("TransactionApproved")
-        userContextEnricher.enrichWithTransactionContext(event.transactionId.toString())
-
-        logger.info(
-            "Domain Event: TransactionApproved - transactionId={}, userId={}, newRole={}",
-            event.transactionId,
-            event.userId,
-            event.newUserRole
-        )
-    }
-
-    @RabbitListener(queues = ["fraud.detected.queue"])
-    fun onFraudDetected(event: FraudDetectedEvent) {
-        userContextEnricher.enrichWithEventContext("FraudDetected")
-
-        logger.warn(
-            "Domain Event: FraudDetected - transactionId={}, reason={}",
-            event.transactionId,
-            event.fraudReason
-        )
-    }
-}
-```
-
-**Princípio DDD**: Domain Layer não loga. Infrastructure **observa** eventos via listener.
-
-### Logback - JSON Estruturado
-
-**Configuração**: `logback-spring.xml`
-
-```xml
-<appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-    <file>/var/log/melodyhub/melodyhub.json</file>
-    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-        <includeMdcKeyName>traceId</includeMdcKeyName>
-        <includeMdcKeyName>userId</includeMdcKeyName>
-        <includeMdcKeyName>userEmail</includeMdcKeyName>
-        <includeMdcKeyName>userRole</includeMdcKeyName>
-        <includeMdcKeyName>transactionId</includeMdcKeyName>
-        <includeMdcKeyName>eventType</includeMdcKeyName>
-    </encoder>
-</appender>
-
-<!-- Async wrapper para performance -->
-<appender name="ASYNC_JSON" class="ch.qos.logback.classic.AsyncAppender">
-    <appender-ref ref="JSON_FILE"/>
-    <queueSize>512</queueSize>
-    <neverBlock>true</neverBlock>
-</appender>
-```
-
-**Resultado** (log JSON):
+Todos os logs incluem via MDC (Mapped Diagnostic Context):
 
 ```json
 {
-  "@timestamp": "2025-11-14T10:30:00.123Z",
-  "level": "INFO",
-  "logger_name": "TransactionService",
-  "message": "Creating transaction",
-  "traceId": "550e8400-e29b-41d4-a716-446655440000",
-  "userId": "660e8400-e29b-41d4-a716-446655440001",
-  "userRole": "SEM_PLANO",
-  "transactionId": "770e8400-e29b-41d4-a716-446655440002",
+  "traceId": "550e8400-...",
+  "userId": "660e8400-...",
+  "userEmail": "test@test.com",
+  "userRole": "PREMIUM",
+  "transactionId": "770e8400-...",
+  "musicId": "ObjectId(...)",
+  "playlistId": "880e8400-...",
   "eventType": "TransactionApproved",
-  "application": "melodyhub",
-  "environment": "production"
+  "requestUri": "/api/transactions",
+  "requestMethod": "POST"
 }
-```
-
-### Pipeline Logstash
-
-**Configuração**: `logstash/pipeline/melodyhub.conf`
-
-```
-input {
-  file {
-    path => "/var/log/melodyhub/melodyhub.json"
-    codec => "json"
-    start_position => "beginning"
-  }
-}
-
-filter {
-  # Tag eventos de domínio
-  if [eventType] {
-    mutate { add_tag => ["domain_event"] }
-  }
-
-  # Tag transações
-  if [transactionId] {
-    mutate { add_tag => ["transaction"] }
-  }
-
-  # Tag alertas
-  if [level] == "ERROR" or [level] == "WARN" {
-    mutate { add_tag => ["alert"] }
-  }
-}
-
-output {
-  elasticsearch {
-    hosts => ["elasticsearch:9200"]
-    index => "melodyhub-%{+YYYY.MM.dd}"
-  }
-}
-```
-
-### Queries no Kibana
-
-**Eventos de domínio**:
-```
-tags: "domain_event"
-```
-
-**Fraudes detectadas**:
-```
-eventType: "FraudDetected" OR (tags: "alert" AND logger_name: *AntiFraudService*)
-```
-
-**Rastrear requisição completa por trace ID**:
-```
-traceId: "550e8400-e29b-41d4-a716-446655440000"
-```
-
-**Transações de um usuário**:
-```
-userId: "660e8400-e29b-41d4-a716-446655440001" AND tags: "transaction"
-```
-
-**Requisições lentas (> 1s)**:
-```
-message: "HTTP Response" AND duration > 1000
 ```
 
 ---
 
-## Boas Práticas DDD Implementadas
+## Repository Pattern - Inversão de Dependência
 
-### ✅ Rich Domain Model
-
-Aggregates contêm lógica de negócio, não são anêmicos:
-
-```kotlin
-class Transaction {
-    fun approve(newUserRole: UserRole) {
-        require(status == PENDING) { "Only pending can be approved" }
-        // Lógica + evento
+```mermaid
+classDiagram
+    class TransactionRepository {
+        <<interface>>
+        +save(Transaction) Transaction
+        +findById(UUID) Transaction?
+        +findByUserId(UUID) List~Transaction~
     }
-}
-```
 
-### ✅ Ubiquitous Language
-
-Nomes refletem linguagem do domínio:
-- `Transaction.approve()` não `Transaction.setStatusApproved()`
-- `AntiFraudService.validateTransaction()` não `AntiFraudService.check()`
-- `UserRole.SEM_PLANO` não `UserRole.FREE`
-
-### ✅ Invariantes Protegidos
-
-Apenas métodos de negócio modificam estado:
-
-```kotlin
-// ❌ Não expõe setter
-// transaction.status = APPROVED
-
-// ✅ Usa método de negócio
-transaction.approve(newRole)
-```
-
-### ✅ Bounded Contexts Separados
-
-- **Account Context**: User aggregate
-- **Payment Context**: Transaction, CreditCard aggregates
-- **Catalog Context**: Music aggregate
-- **AntiFraud Context**: Domain Service
-
-### ✅ Anti-Corruption Layer
-
-DTOs protegem domain de dependências externas:
-
-```kotlin
-// Request DTO (camada de aplicação)
-data class CreateTransactionRequest(
-    val userId: UUID,
-    val subscriptionType: SubscriptionType,
-    val creditCardId: Long
-)
-
-// Response DTO (camada de aplicação)
-data class TransactionResponse(
-    val id: UUID,
-    val userId: UUID,
-    val status: String,
-    // ...
-) {
-    companion object {
-        fun from(transaction: Transaction) = TransactionResponse(
-            id = transaction.id,
-            userId = transaction.userId,
-            status = transaction.status.name,
-            // ...
-        )
+    class TransactionRepositoryImpl {
+        -jpaRepository: JpaTransactionRepository
+        +save(Transaction) Transaction
+        +findById(UUID) Transaction?
+        +findByUserId(UUID) List~Transaction~
     }
-}
+
+    class JpaTransactionRepository {
+        <<Spring Data JPA>>
+        extends JpaRepository
+    }
+
+    class TransactionService {
+        -repository: TransactionRepository
+        +createTransaction() TransactionResponse
+    }
+
+    TransactionRepository <|.. TransactionRepositoryImpl : implements
+    TransactionRepositoryImpl --> JpaTransactionRepository : uses
+    TransactionService --> TransactionRepository : depends on interface
+
+    note for TransactionRepository "Domain Layer\n(interface)"
+    note for TransactionService "Application Layer\n(usa abstração)"
+    note for TransactionRepositoryImpl "Infrastructure Layer\n(adapter)"
 ```
 
-### ✅ Eventos de Domínio para Comunicação
-
-Contextos se comunicam via eventos, não chamadas diretas:
-
-```
-Payment Context publica TransactionApprovedEvent
-    ↓
-Account Context consome evento e atualiza User.role
-```
+**Benefício**: Domain não conhece JPA. Fácil trocar para MongoDB, Redis, etc.
 
 ---
 
-## Estrutura de Diretórios
+## Estrutura de Diretórios (DDD)
 
 ```
 src/main/kotlin/edu/infnet/melodyhub/
 │
-├── domain/                           # DOMAIN LAYER
+├── domain/                           # 🎯 DOMAIN LAYER
 │   ├── shared/
-│   │   ├── AggregateRoot.kt         # Base para aggregates
-│   │   └── DomainEvent.kt           # Interface de eventos
+│   │   ├── AggregateRoot.kt         # Base class
+│   │   └── DomainEvent.kt
 │   ├── events/
 │   │   ├── TransactionApprovedEvent.kt
 │   │   ├── FraudDetectedEvent.kt
@@ -723,198 +522,262 @@ src/main/kotlin/edu/infnet/melodyhub/
 │   │   ├── UserRole.kt              # Value Object
 │   │   └── UserRepository.kt        # Interface
 │   ├── transaction/
-│   │   ├── Transaction.kt           # Aggregate Root
-│   │   ├── SubscriptionType.kt      # Value Object
+│   │   ├── Transaction.kt
+│   │   ├── SubscriptionType.kt
 │   │   └── TransactionRepository.kt
 │   ├── music/
-│   │   ├── Music.kt                 # Aggregate Root (MongoDB)
+│   │   ├── Music.kt
 │   │   └── MusicRepository.kt
 │   └── playlist/
 │       ├── Playlist.kt
 │       └── PlaylistRepository.kt
 │
-├── application/                      # APPLICATION LAYER
+├── application/                      # 💼 APPLICATION LAYER
 │   ├── user/
 │   │   ├── UserService.kt
-│   │   └── dto/
-│   │       ├── CreateUserRequest.kt
-│   │       └── UserResponse.kt
-│   ├── auth/
-│   │   ├── AuthService.kt
 │   │   └── dto/
 │   ├── transaction/
 │   │   ├── TransactionService.kt
 │   │   ├── AntiFraudService.kt      # Domain Service
 │   │   └── dto/
+│   ├── auth/
+│   │   ├── AuthService.kt
+│   │   └── dto/
 │   └── music/
 │       ├── MusicService.kt
 │       └── dto/
 │
-└── infrastructure/                   # INFRASTRUCTURE LAYER
+└── infrastructure/                   # 🔧 INFRASTRUCTURE LAYER
     ├── web/                         # Controllers REST
     │   ├── UserController.kt
-    │   ├── AuthController.kt
     │   ├── TransactionController.kt
     │   └── MusicController.kt
     ├── user/
-    │   ├── JpaUserRepository.kt     # Spring Data JPA
+    │   ├── JpaUserRepository.kt     # Spring Data
     │   └── UserRepositoryImpl.kt    # Adapter
-    ├── transaction/
-    │   ├── JpaTransactionRepository.kt
-    │   └── TransactionRepositoryImpl.kt
     ├── security/
     │   ├── JwtService.kt
     │   └── SecurityConfig.kt
-    ├── config/
-    │   ├── MongoConfig.kt
-    │   └── RabbitConfig.kt
     ├── events/
-    │   └── DomainEventPublisher.kt  # RabbitMQ publisher
-    └── observability/               # Logging & Monitoring
+    │   └── DomainEventPublisher.kt  # RabbitMQ
+    └── observability/
         ├── MdcFilter.kt
         ├── RequestLoggingFilter.kt
         ├── UserContextEnricher.kt
-        └── DomainEventLogger.kt     # Event listener
+        └── DomainEventLogger.kt
 ```
 
 ---
 
-## Bancos de Dados
+## Bancos de Dados - Dual Database
 
-### PostgreSQL (Relacional)
+```mermaid
+graph LR
+    subgraph App[Application]
+        S[Services]
+    end
 
-**Entidades**:
-- `users` (User aggregate)
-- `transactions` (Transaction aggregate)
-- `credit_cards` (CreditCard aggregate)
-- `playlists` (Playlist aggregate)
-- `playlist_music` (join table)
+    subgraph PG[PostgreSQL - Relacional]
+        T1[(users)]
+        T2[(transactions)]
+        T3[(credit_cards)]
+        T4[(playlists)]
+        T5[(playlist_music)]
+    end
 
-**Schema Management**: Hibernate DDL auto-update
+    subgraph Mongo[MongoDB - Documentos]
+        C1[(music)]
+        C2[(fs.files)]
+        C3[(fs.chunks)]
+    end
 
-### MongoDB (Documentos)
+    S -->|JPA| PG
+    S -->|GridFS| Mongo
 
-**Collections**:
-- `music` (Music aggregate - metadados)
-- `fs.files` + `fs.chunks` (GridFS - arquivos binários de áudio)
+    style PG fill:#336791,color:#fff
+    style Mongo fill:#4db33d,color:#fff
+```
 
-**GridFS**: Armazenamento de arquivos > 16MB (MP3, FLAC, AAC)
+**PostgreSQL**: Dados relacionais (usuários, transações, playlists)
+**MongoDB GridFS**: Arquivos de áudio > 16MB (MP3, FLAC, AAC)
 
 ---
 
-## Autenticação e Autorização
+## Autenticação JWT - Flow
 
-### JWT Flow
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant A as AuthController
+    participant S as AuthService
+    participant J as JwtService
+    participant DB as Database
 
+    U->>A: POST /api/auth/login<br/>{email, password}
+    A->>S: authenticate(request)
+    S->>DB: findByEmail(email)
+    DB-->>S: User
+
+    S->>S: BCrypt.matches(password, user.password)
+
+    alt Senha correta
+        S->>J: generateToken(user)
+        J->>J: Create JWT with claims:<br/>{sub: email, userId, role}
+        J-->>S: token (String)
+        S-->>A: LoginResponse(token, user)
+        A-->>U: 200 OK + JWT
+    else Senha incorreta
+        S-->>A: throw InvalidCredentials
+        A-->>U: 401 Unauthorized
+    end
+
+    Note over U,DB: Token expira em 24h<br/>Claims: email, userId, role
 ```
-1. POST /api/auth/login
-   → AuthService valida credenciais (BCrypt)
-   → Gera JWT com claims: { sub: email, userId, role }
 
-2. Cliente envia JWT no header: Authorization: Bearer <token>
-
-3. JwtService valida token e extrai claims
-
-4. Controllers verificam role para operações sensíveis
-```
-
-### Controle de Acesso (Music)
-
-```kotlin
-// infrastructure/web/MusicController.kt
-private fun checkPermission(user: User, operation: String, format: String) {
-    when (operation) {
-        "STREAM" -> {
-            // SEM_PLANO: apenas MP3/AAC
-            if (user.role == UserRole.SEM_PLANO && format == "FLAC") {
-                throw IllegalAccessException("FLAC streaming requires BASIC plan")
-            }
-        }
-        "DOWNLOAD" -> {
-            // Requer BASIC ou superior
-            if (user.role == UserRole.SEM_PLANO) {
-                throw IllegalAccessException("Downloads require BASIC plan")
-            }
-            // BASIC: apenas MP3/AAC, PREMIUM: todos
-            if (user.role == UserRole.BASIC && format == "FLAC") {
-                throw IllegalAccessException("FLAC downloads require PREMIUM plan")
-            }
-        }
-    }
+**Claims JWT**:
+```json
+{
+  "sub": "user@example.com",
+  "userId": "550e8400-...",
+  "role": "PREMIUM",
+  "iat": 1700000000,
+  "exp": 1700086400
 }
 ```
 
 ---
 
+## Controle de Acesso - Music Permissions
+
+```mermaid
+graph TD
+    U[Usuário] -->|Request| C{Operação?}
+
+    C -->|STREAM| S1{Role?}
+    C -->|DOWNLOAD| D1{Role?}
+
+    S1 -->|SEM_PLANO| S2{Formato?}
+    S1 -->|BASIC+| Allow1[✅ Permite todos formatos]
+    S1 -->|PREMIUM+| Allow1
+    S1 -->|ADMIN| Allow1
+
+    S2 -->|MP3/AAC| Allow2[✅ Permite]
+    S2 -->|FLAC| Deny1[❌ Requer BASIC]
+
+    D1 -->|SEM_PLANO| Deny2[❌ Requer BASIC]
+    D1 -->|BASIC| D2{Formato?}
+    D1 -->|PREMIUM| Allow3[✅ Permite todos]
+    D1 -->|ADMIN| Allow3
+
+    D2 -->|MP3/AAC| Allow4[✅ Permite]
+    D2 -->|FLAC| Deny3[❌ Requer PREMIUM]
+
+    style Allow1 fill:#4caf50,color:#fff
+    style Allow2 fill:#4caf50,color:#fff
+    style Allow3 fill:#4caf50,color:#fff
+    style Allow4 fill:#4caf50,color:#fff
+    style Deny1 fill:#f44336,color:#fff
+    style Deny2 fill:#f44336,color:#fff
+    style Deny3 fill:#f44336,color:#fff
+```
+
+| Role | Stream MP3/AAC | Stream FLAC | Download MP3/AAC | Download FLAC | Upload |
+|------|----------------|-------------|------------------|---------------|--------|
+| SEM_PLANO | ✅ | ❌ | ❌ | ❌ | ❌ |
+| BASIC | ✅ | ✅ | ✅ | ❌ | ❌ |
+| PREMIUM | ✅ | ✅ | ✅ | ✅ | ❌ |
+| ADMIN | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+---
+
 ## Docker Compose - Ambiente Completo
 
-```yaml
-version: '3.8'
+```mermaid
+graph TB
+    subgraph Docker[Docker Compose]
+        App[melodyhub-app<br/>:8080]
+        PG[postgres:16<br/>:5432]
+        Mongo[mongo:7<br/>:27017]
+        Rabbit[rabbitmq:3.13<br/>:5672, :15672]
 
-services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
-      - mongo
-      - rabbitmq
-      - elasticsearch
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/melodyhub
-      SPRING_DATA_MONGODB_URI: mongodb://root:rootpassword@mongo:27017/melodyhub-files
-      SPRING_RABBITMQ_HOST: rabbitmq
+        ES[elasticsearch:8.11<br/>:9200]
+        LS[logstash:8.11<br/>:5044]
+        KB[kibana:8.11<br/>:5601]
+    end
 
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: melodyhub
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+    App -->|JDBC| PG
+    App -->|GridFS| Mongo
+    App -->|AMQP| Rabbit
+    App -->|Logs| LS
 
-  mongo:
-    image: mongo:7
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    LS --> ES
+    KB --> ES
 
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    ports:
-      - "15672:15672"  # Management UI
-    environment:
-      RABBITMQ_DEFAULT_USER: melodyhub
-      RABBITMQ_DEFAULT_PASS: melodyhub123
+    style App fill:#6db33f,color:#fff
+    style Rabbit fill:#ff6600,color:#fff
+    style ES fill:#005571,color:#fff
+```
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
-    ports:
-      - "9200:9200"
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+**Services**:
+- `app`: Aplicação Spring Boot (porta 8080)
+- `postgres`: Banco relacional (porta 5432)
+- `mongo`: Banco de documentos (porta 27017)
+- `rabbitmq`: Mensageria (portas 5672 AMQP, 15672 Management UI)
+- `elasticsearch`: Indexação de logs (porta 9200)
+- `logstash`: Processamento de logs (porta 5044)
+- `kibana`: Visualização de logs (porta 5601)
 
-  logstash:
-    image: docker.elastic.co/logstash/logstash:8.11.0
-    volumes:
-      - ./logstash/pipeline:/usr/share/logstash/pipeline
-      - app-logs:/var/log/melodyhub
-    depends_on:
-      - elasticsearch
+---
 
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.0
-    ports:
-      - "5601:5601"
-    depends_on:
-      - elasticsearch
+## Padrões DDD Implementados
 
-volumes:
-  app-logs:
+| Padrão | Implementação | Exemplo |
+|--------|---------------|---------|
+| **Aggregate** | User, Transaction, Music, Playlist | `Transaction` com métodos `approve()`, `reject()` |
+| **Aggregate Root** | Base class com eventos | `AggregateRoot.registerEvent()` |
+| **Value Object** | Enums imutáveis | `UserRole`, `SubscriptionType`, `TransactionStatus` |
+| **Repository** | Interface no domain, adapter na infra | `TransactionRepository` (interface) → `TransactionRepositoryImpl` |
+| **Domain Service** | Lógica que não pertence a um aggregate | `AntiFraudService` (10 regras de validação) |
+| **Domain Event** | Eventos de negócio | `TransactionApprovedEvent`, `FraudDetectedEvent` |
+| **Factory** | Métodos de criação | `TransactionResponse.from(transaction)` |
+| **Anti-Corruption Layer** | DTOs separando domain de API | `CreateTransactionRequest` → `Transaction` → `TransactionResponse` |
+| **Ubiquitous Language** | Nomes do domínio | `approve()`, `reject()`, `validateTransaction()`, não `setStatus()` |
+
+---
+
+## Testes - Cobertura > 80%
+
+**29 arquivos de teste** cobrindo todas as camadas:
+
+```
+src/test/kotlin/
+├── domain/
+│   ├── AggregateRootTest.kt
+│   ├── TransactionTest.kt
+│   ├── UserTest.kt
+│   ├── PlaylistTest.kt
+│   └── DomainEventsTest.kt
+├── application/
+│   ├── TransactionServiceTest.kt
+│   ├── AntiFraudServiceTest.kt    # Testa 10 regras
+│   ├── AuthServiceTest.kt
+│   └── UserServiceTest.kt
+└── infrastructure/
+    ├── TransactionControllerTest.kt
+    ├── UserControllerTest.kt
+    ├── JwtServiceTest.kt
+    └── ...
+```
+
+**Ferramentas**:
+- JUnit 5
+- Mockito Kotlin
+- JaCoCo (cobertura)
+
+**Comando**:
+```bash
+./gradlew test jacocoTestReport
+# Relatório: build/reports/jacoco/test/html/index.html
 ```
 
 ---
@@ -928,58 +791,91 @@ docker-compose up --build
 # Logs da aplicação
 docker-compose logs -f app
 
-# Acessar Kibana
-open http://localhost:5601
-
-# Verificar índices Elasticsearch
-curl http://localhost:9200/_cat/indices?v
+# Acessar serviços
+open http://localhost:8080        # API
+open http://localhost:5601        # Kibana
+open http://localhost:15672       # RabbitMQ Management
 
 # Criar usuário
 curl -X POST http://localhost:8080/api/users \
   -H "Content-Type: application/json" \
   -d '{"name":"Test","email":"test@test.com","password":"senha123"}'
 
-# Login
+# Login (obter JWT)
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@test.com","password":"senha123"}'
 
-# Criar transação (com token JWT)
-curl -X POST http://localhost:8080/api/transactions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <TOKEN>" \
-  -d '{"userId":"<UUID>","subscriptionType":"PREMIUM","creditCardId":1}'
+# Rodar testes
+./gradlew test
+
+# Gerar relatório de cobertura
+./gradlew jacocoTestReport
 ```
 
 ---
 
-## Principais Padrões DDD Aplicados
+## Queries no Kibana
 
-| Padrão | Implementação | Localização |
-|--------|---------------|-------------|
-| **Aggregate** | User, Transaction, Music, Playlist | `domain/` |
-| **Aggregate Root** | Base class com eventos | `domain/shared/AggregateRoot.kt` |
-| **Value Object** | UserRole, SubscriptionType, TransactionStatus | `domain/` enums |
-| **Repository** | Interfaces no domain, adapters na infra | `domain/*/Repository.kt` |
-| **Domain Service** | AntiFraudService (lógica que não pertence a um aggregate) | `application/transaction/` |
-| **Domain Event** | TransactionApproved, FraudDetected, etc | `domain/events/` |
-| **Factory** | `from()` methods em DTOs | `application/*/dto/` |
-| **Anti-Corruption Layer** | DTOs separando domain de API | `application/*/dto/` |
-| **Bounded Context** | Account, Payment, Catalog, AntiFraud | Organização em packages |
+**Eventos de domínio**:
+```
+tags: "domain_event"
+```
+
+**Fraudes detectadas**:
+```
+eventType: "FraudDetected"
+```
+
+**Rastrear requisição por trace ID**:
+```
+traceId: "550e8400-e29b-41d4-a716-446655440000"
+```
+
+**Transações de um usuário**:
+```
+userId: "660e8400-..." AND tags: "transaction"
+```
+
+**Requisições lentas (> 1 segundo)**:
+```
+message: "HTTP Response" AND duration > 1000
+```
 
 ---
 
-## Segurança
+## Boas Práticas DDD
 
-**Implementado**:
-- Senhas hasheadas com BCrypt (nunca em texto plano)
-- JWT com expiração de 24h
-- Validação de propriedade (cartão pertence ao usuário)
-- Logs não expõem dados sensíveis (sem senhas, tokens completos)
+### ✅ Rich Domain Model
+Aggregates contêm lógica, não são anêmicos:
+```kotlin
+transaction.approve(newRole)  // ✅ Método de negócio
+// transaction.status = APPROVED  ❌ Não expõe setter
+```
 
-**Produção** (recomendações):
-- Externalizar JWT secret (variável de ambiente)
-- HTTPS obrigatório
-- Rate limiting
-- Elasticsearch com autenticação (X-Pack)
-- LGPD compliance (retenção de logs, anonimização)
+### ✅ Ubiquitous Language
+Nomes refletem linguagem do domínio:
+- `approve()` não `setStatusApproved()`
+- `validateTransaction()` não `check()`
+
+### ✅ Invariantes Protegidos
+```kotlin
+fun approve(newUserRole: UserRole) {
+    require(status == PENDING) { "Only pending can be approved" }
+    // ...
+}
+```
+
+### ✅ Domain Puro
+Domain Layer não depende de frameworks:
+- Sem Spring annotations em Aggregates
+- Sem logging direto
+- Repository como interface
+
+### ✅ Eventos para Comunicação
+Contextos se comunicam via eventos, não chamadas diretas:
+```
+Payment publica TransactionApprovedEvent
+    ↓ RabbitMQ
+Account consome e atualiza User.role
+```
