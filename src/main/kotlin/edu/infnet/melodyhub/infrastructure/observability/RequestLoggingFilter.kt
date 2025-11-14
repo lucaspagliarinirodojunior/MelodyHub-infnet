@@ -3,6 +3,7 @@ package edu.infnet.melodyhub.infrastructure.observability
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
@@ -24,7 +25,7 @@ import org.springframework.web.util.ContentCachingResponseWrapper
 class RequestLoggingFilter : OncePerRequestFilter() {
 
     companion object {
-        private val logger = LoggerFactory.getLogger(RequestLoggingFilter::class.java)
+        private val log: Logger = LoggerFactory.getLogger(RequestLoggingFilter::class.java)
     }
 
     override fun doFilterInternal(
@@ -56,7 +57,7 @@ class RequestLoggingFilter : OncePerRequestFilter() {
         val queryString = request.queryString?.let { "?$it" } ?: ""
         val uri = "${request.requestURI}$queryString"
 
-        logger.info(
+        log.info(
             "HTTP Request: method={}, uri={}, contentType={}, remoteAddr={}",
             request.method,
             uri,
@@ -66,7 +67,7 @@ class RequestLoggingFilter : OncePerRequestFilter() {
     }
 
     private fun logResponse(response: ContentCachingResponseWrapper, duration: Long) {
-        logger.info(
+        log.info(
             "HTTP Response: status={}, contentType={}, duration={}ms",
             response.status,
             response.contentType ?: "N/A",
