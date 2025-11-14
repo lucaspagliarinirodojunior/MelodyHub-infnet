@@ -53,6 +53,62 @@ services:
     networks:
       - melodyhub-network
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: melodyhub-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - melodyhub-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: melodyhub-logstash
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - app_logs:/var/log/melodyhub:ro
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - melodyhub-network
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: melodyhub-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - melodyhub-network
+    restart: unless-stopped
+
   app:
     build:
       context: .
@@ -77,12 +133,16 @@ services:
       - ./settings.gradle.kts:/app/settings.gradle.kts
       # Cache do Gradle para não recompilar tudo
       - gradle-cache:/home/gradle/.gradle
+      # Logs compartilhados com Logstash
+      - app_logs:/var/log/melodyhub
     depends_on:
       postgres:
         condition: service_healthy
       mongo:
         condition: service_started
       rabbitmq:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
     networks:
       - melodyhub-network
@@ -96,6 +156,10 @@ volumes:
   rabbitmq_data:
     driver: local
   gradle-cache:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  app_logs:
     driver: local
 
 networks:

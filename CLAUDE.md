@@ -173,15 +173,96 @@ Located in: `application/music/MusicService.kt`
 - `GET /music/stream/{id}` - Stream music (requires JWT + role check)
 - `GET /music/list` - List all music (requires JWT)
 
+## Observability - ELK Stack
+
+MelodyHub implementa observabilidade completa com Elasticsearch, Logstash e Kibana, respeitando DDD:
+
+### Stack Components
+- **Elasticsearch** (port 9200): Log storage and indexing
+- **Logstash** (ports 5044, 9600): Log processing and enrichment
+- **Kibana** (port 5601): Visualization and analysis dashboard
+
+### Logging Architecture (DDD-Compliant)
+
+**Domain Layer**: Pure, no logging (domain events are observed externally)
+**Application Layer**: Business logic logging (use cases, services)
+**Infrastructure Layer**: Technical logging (HTTP, MDC, event listeners)
+
+### Key Components
+
+1. **MdcFilter** (`infrastructure/observability/MdcFilter.kt`):
+   - Adds trace ID to all requests (X-Trace-Id header)
+   - Populates MDC with request context
+
+2. **RequestLoggingFilter** (`infrastructure/observability/RequestLoggingFilter.kt`):
+   - Logs HTTP requests/responses with latency
+   - Skips actuator endpoints
+
+3. **UserContextEnricher** (`infrastructure/observability/UserContextEnricher.kt`):
+   - Enriches MDC with user, transaction, music, event contexts
+
+4. **DomainEventLogger** (`infrastructure/observability/DomainEventLogger.kt`):
+   - Listens to domain events via RabbitMQ
+   - Creates structured logs without modifying domain logic
+
+### Configuration
+
+- **Logback**: `src/main/resources/logback-spring.xml`
+  - Console appender (human-readable)
+  - JSON file appender (ELK-ready)
+  - Async wrapper for performance
+
+- **Logstash Pipeline**: `logstash/pipeline/melodyhub.conf`
+  - Parses JSON logs
+  - Tags by type: domain_event, transaction, user_activity, music_activity
+  - Indexes to `melodyhub-YYYY.MM.dd`
+
+### Access Points
+
+```bash
+# Kibana Dashboard
+http://localhost:5601
+
+# Elasticsearch API
+http://localhost:9200
+
+# Spring Boot Actuator
+http://localhost:8080/actuator/health
+http://localhost:8080/actuator/metrics
+http://localhost:8080/actuator/prometheus
+```
+
+### Usage
+
+```bash
+# Start ELK stack with application
+docker-compose up -d
+
+# View application logs
+docker-compose logs -f app
+
+# Check Elasticsearch indices
+curl http://localhost:9200/_cat/indices?v
+
+# Query logs
+curl http://localhost:9200/melodyhub-*/_search?pretty
+```
+
+**Full documentation**: See `ELK.md` for detailed setup, queries, dashboards, and troubleshooting.
+
 ## Configuration Files
 
 - `build.gradle.kts` - Gradle build configuration with Kotlin DSL
 - `settings.gradle.kts` - Project name configuration
-- `docker-compose.yml` - Multi-container setup (app, PostgreSQL, MongoDB)
+- `docker-compose.yml` - Multi-container setup (app, PostgreSQL, MongoDB, ELK Stack)
 - `Dockerfile.dev` - Development container with hot reload
 - `Dockerfile` - Production-optimized container (multi-stage build)
 - `gradle.properties` - Gradle daemon configuration
 - `src/main/resources/application.yml` - Spring Boot configuration
+- `src/main/resources/logback-spring.xml` - Logback configuration for structured JSON logging
+- `logstash/pipeline/melodyhub.conf` - Logstash pipeline configuration
+- `logstash/config/logstash.yml` - Logstash service configuration
+- `ELK.md` - Complete ELK Stack documentation
 
 ## Important Implementation Notes
 
