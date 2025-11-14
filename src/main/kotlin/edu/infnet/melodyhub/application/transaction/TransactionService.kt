@@ -4,21 +4,41 @@ import edu.infnet.melodyhub.application.transaction.dto.CreateTransactionRequest
 import edu.infnet.melodyhub.application.transaction.dto.TransactionResponse
 import edu.infnet.melodyhub.domain.transaction.Transaction
 import edu.infnet.melodyhub.domain.transaction.TransactionRepository
+import edu.infnet.melodyhub.infrastructure.observability.UserContextEnricher
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
 
+/**
+ * Application Layer - Transaction Use Cases
+ *
+ * Service responsible for transaction processing business logic.
+ * Logs transaction operations for audit and fraud detection analysis.
+ */
 @Service
 class TransactionService(
     private val transactionRepository: TransactionRepository,
     private val antiFraudService: AntiFraudService,
-    private val eventPublisher: edu.infnet.melodyhub.infrastructure.events.DomainEventPublisher
+    private val eventPublisher: edu.infnet.melodyhub.infrastructure.events.DomainEventPublisher,
+    private val userContextEnricher: UserContextEnricher
 ) {
+    private val logger = LoggerFactory.getLogger(TransactionService::class.java)
 
     @Transactional
     fun createTransaction(request: CreateTransactionRequest): TransactionResponse {
+        logger.info(
+            "Creating transaction: userId={}, subscriptionType={}, amount={}",
+            request.userId,
+            request.subscriptionType,
+            request.subscriptionType.monthlyPrice
+        )
+
+        // Enriquecer contexto de logging
+        userContextEnricher.enrichWithUserContext(request.userId.toString(), null, null)
+
         // Obter valor da assinatura
         val amount = request.subscriptionType.monthlyPrice
 
@@ -34,11 +54,23 @@ class TransactionService(
         val fraudCheckResult = antiFraudService.validateTransaction(transaction)
 
         if (!fraudCheckResult.isValid) {
+            logger.warn(
+                "Transaction rejected by anti-fraud: userId={}, reason={}",
+                request.userId,
+                fraudCheckResult.reason
+            )
             // Aggregate publica seu próprio evento de fraude
             transaction.reject(fraudCheckResult.reason ?: "Validação de antifraude falhou")
         } else {
             // Calcular novo role baseado no tipo de assinatura
             val newRole = calculateNewRole(request.subscriptionType)
+
+            logger.info(
+                "Transaction approved: userId={}, subscriptionType={}, newRole={}",
+                request.userId,
+                request.subscriptionType,
+                newRole
+            )
 
             // Aggregate publica seu próprio evento de aprovação
             // O evento será consumido pelo Account Context que atualizará o User
@@ -48,6 +80,12 @@ class TransactionService(
 
         // Salvar transação
         val savedTransaction = transactionRepository.save(transaction)
+
+        // Adicionar contexto de transação aos logs
+        savedTransaction.id?.let { transactionId ->
+            userContextEnricher.enrichWithTransactionContext(transactionId.toString())
+            logger.info("Transaction saved: transactionId={}", transactionId)
+        }
 
         // Registrar evento de validação (após ter ID salvo)
         savedTransaction.recordValidation(fraudCheckResult.isValid, fraudCheckResult.reason)
@@ -94,15 +132,29 @@ class TransactionService(
     }
 }
 
+/**
+ * Application Layer - Anti-Fraud Use Cases
+ *
+ * Service responsible for fraud detection business rules.
+ * Logs fraud detection events for security analysis and pattern detection.
+ */
 @Service
 class AntiFraudService(
     private val transactionRepository: TransactionRepository,
     private val creditCardRepository: edu.infnet.melodyhub.domain.creditcard.CreditCardRepository
 ) {
+    private val logger = LoggerFactory.getLogger(AntiFraudService::class.java)
 
     fun validateTransaction(transaction: Transaction): FraudCheckResult {
+        logger.debug("Starting anti-fraud validation for userId={}", transaction.userId)
+
         // Regra 1: Validar se o valor é positivo
         if (transaction.amount <= BigDecimal.ZERO) {
+            logger.warn(
+                "Anti-fraud rule violated: negative amount - userId={}, amount={}",
+                transaction.userId,
+                transaction.amount
+            )
             return FraudCheckResult(
                 isValid = false,
                 reason = "Valor da transação deve ser positivo"
@@ -111,6 +163,11 @@ class AntiFraudService(
 
         // Regra 2: Validar limite máximo (R$ 100,00 para demonstração)
         if (transaction.amount > BigDecimal("100.00")) {
+            logger.warn(
+                "Anti-fraud rule violated: amount exceeds limit - userId={}, amount={}",
+                transaction.userId,
+                transaction.amount
+            )
             return FraudCheckResult(
                 isValid = false,
                 reason = "Valor da transação excede o limite permitido de R$ 100,00"
@@ -123,6 +180,11 @@ class AntiFraudService(
             .countByUserIdAndCreatedAtAfter(transaction.userId, twoMinutesAgo)
 
         if (recentTransactionsCount >= 3) {
+            logger.warn(
+                "Anti-fraud rule violated: high frequency - userId={}, count={} in 2 minutes",
+                transaction.userId,
+                recentTransactionsCount
+            )
             return FraudCheckResult(
                 isValid = false,
                 reason = "Alta frequência detectada: mais de 3 transações em 2 minutos"
@@ -198,6 +260,11 @@ class AntiFraudService(
         }
 
         // Todas as regras passaram
+        logger.info(
+            "Anti-fraud validation passed for userId={}, amount={}",
+            transaction.userId,
+            transaction.amount
+        )
         return FraudCheckResult(
             isValid = true,
             reason = null

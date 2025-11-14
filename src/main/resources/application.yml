@@ -53,3 +53,34 @@ server:
   error:
     include-message: always
     include-binding-errors: always
+
+# Observability - Actuator endpoints for monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,loggers
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+
+# Logging configuration
+logging:
+  level:
+    edu.infnet.melodyhub: INFO
+    edu.infnet.melodyhub.domain.events: INFO
+    edu.infnet.melodyhub.application: INFO
+    edu.infnet.melodyhub.infrastructure.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

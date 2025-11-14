@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <property name="LOG_FILE" value="${LOG_FILE:-${LOG_PATH:-${LOG_TEMP:-${java.io.tmpdir:-/tmp}}/}melodyhub.log}"/>
+    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <!-- Console Appender - Human Readable (for development) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- File Appender - JSON Format (for ELK Stack) -->
+    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>/var/log/melodyhub/melodyhub.json</file>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>userId</includeMdcKeyName>
+            <includeMdcKeyName>userEmail</includeMdcKeyName>
+            <includeMdcKeyName>userRole</includeMdcKeyName>
+            <includeMdcKeyName>transactionId</includeMdcKeyName>
+            <includeMdcKeyName>musicId</includeMdcKeyName>
+            <includeMdcKeyName>playlistId</includeMdcKeyName>
+            <includeMdcKeyName>eventType</includeMdcKeyName>
+            <customFields>{"application":"melodyhub","environment":"${SPRING_PROFILES_ACTIVE:-default}"}</customFields>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>/var/log/melodyhub/melodyhub-%d{yyyy-MM-dd}.%i.json</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- Async wrapper for better performance -->
+    <appender name="ASYNC_JSON" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="JSON_FILE"/>
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+    </appender>
+
+    <!-- Domain Events Logger - Captures all domain events -->
+    <logger name="edu.infnet.melodyhub.domain.events" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_JSON"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <!-- Application Layer Logger - Use cases and business logic -->
+    <logger name="edu.infnet.melodyhub.application" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_JSON"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <!-- Infrastructure Layer Logger -->
+    <logger name="edu.infnet.melodyhub.infrastructure" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_JSON"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <!-- Security and Authentication -->
+    <logger name="edu.infnet.melodyhub.infrastructure.security" level="DEBUG" additivity="false">
+        <appender-ref ref="ASYNC_JSON"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <!-- Reduce noise from Spring/Hibernate -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.mongodb" level="WARN"/>
+    <logger name="org.apache" level="WARN"/>
+
+    <!-- Show SQL statements (for debugging) -->
+    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
+
+    <!-- Root Logger -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_JSON"/>
+    </root>
+</configuration>
