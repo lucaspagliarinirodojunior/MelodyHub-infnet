@@ -27,27 +27,27 @@ class DomainEventLogger(
     @RabbitListener(queues = ["transaction.approved.queue"])
     fun onTransactionApproved(event: TransactionApprovedEvent) {
         userContextEnricher.enrichWithEventContext("TransactionApproved")
-        userContextEnricher.enrichWithTransactionContext(event.transactionId)
+        userContextEnricher.enrichWithTransactionContext(event.transactionId.toString())
 
         logger.info(
-            "Domain Event: TransactionApproved - transactionId={}, userId={}, amount={}, subscriptionType={}",
+            "Domain Event: TransactionApproved - transactionId={}, userId={}, subscriptionType={}, newRole={}",
             event.transactionId,
             event.userId,
-            event.amount,
-            event.subscriptionType
+            event.subscriptionType,
+            event.newUserRole
         )
     }
 
     @RabbitListener(queues = ["fraud.detected.queue"])
     fun onFraudDetected(event: FraudDetectedEvent) {
         userContextEnricher.enrichWithEventContext("FraudDetected")
-        userContextEnricher.enrichWithTransactionContext(event.transactionId)
+        userContextEnricher.enrichWithTransactionContext(event.transactionId.toString())
 
         logger.warn(
-            "Domain Event: FraudDetected - transactionId={}, userId={}, reason={}",
+            "Domain Event: FraudDetected - transactionId={}, userId={}, fraudReason={}",
             event.transactionId,
             event.userId,
-            event.reason
+            event.fraudReason
         )
     }
 
@@ -66,14 +66,14 @@ class DomainEventLogger(
     @RabbitListener(queues = ["transaction.validated.queue"])
     fun onTransactionValidated(event: TransactionValidatedEvent) {
         userContextEnricher.enrichWithEventContext("TransactionValidated")
-        userContextEnricher.enrichWithTransactionContext(event.transactionId)
+        userContextEnricher.enrichWithTransactionContext(event.transactionId.toString())
 
         logger.info(
-            "Domain Event: TransactionValidated - transactionId={}, userId={}, isValid={}, reason={}",
+            "Domain Event: TransactionValidated - transactionId={}, userId={}, isValid={}, fraudReason={}",
             event.transactionId,
             event.userId,
             event.isValid,
-            event.reason ?: "N/A"
+            event.fraudReason ?: "N/A"
         )
     }
 }

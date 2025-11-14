@@ -23,7 +23,9 @@ import org.springframework.web.util.ContentCachingResponseWrapper
 @Order(2)
 class RequestLoggingFilter : OncePerRequestFilter() {
 
-    private val logger = LoggerFactory.getLogger(RequestLoggingFilter::class.java)
+    companion object {
+        private val logger = LoggerFactory.getLogger(RequestLoggingFilter::class.java)
+    }
 
     override fun doFilterInternal(
         request: HttpServletRequest,
