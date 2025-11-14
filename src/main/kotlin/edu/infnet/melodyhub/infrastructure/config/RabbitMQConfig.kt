@@ -26,6 +26,12 @@ class RabbitMQConfig {
         const val FRAUD_DETECTION_QUEUE = "antifraud.fraud.detection"
         const val TRANSACTION_AUDIT_QUEUE = "antifraud.transaction.audit"
         const val ACCOUNT_SUBSCRIPTION_QUEUE = "account.subscription.updates"
+
+        // Queues para observabilidade (DomainEventLogger)
+        const val TRANSACTION_APPROVED_QUEUE = "transaction.approved.queue"
+        const val FRAUD_DETECTED_QUEUE = "fraud.detected.queue"
+        const val USER_SUBSCRIPTION_UPGRADED_QUEUE = "user.subscription.upgraded.queue"
+        const val TRANSACTION_VALIDATED_QUEUE = "transaction.validated.queue"
     }
 
     /**
@@ -133,5 +139,97 @@ class RabbitMQConfig {
         val template = RabbitTemplate(connectionFactory)
         template.messageConverter = jsonMessageConverter
         return template
+    }
+
+    // ============================================
+    // Queues e Bindings para Observabilidade
+    // ============================================
+
+    /**
+     * Queue para eventos de TransactionApproved (observabilidade).
+     * Usada pelo DomainEventLogger para logging estruturado.
+     */
+    @Bean
+    fun transactionApprovedQueue(): Queue {
+        return QueueBuilder.durable(TRANSACTION_APPROVED_QUEUE)
+            .withArgument("x-message-ttl", 86400000) // 24 horas
+            .build()
+    }
+
+    @Bean
+    fun transactionApprovedBinding(
+        transactionApprovedQueue: Queue,
+        eventsExchange: TopicExchange
+    ): Binding {
+        return BindingBuilder
+            .bind(transactionApprovedQueue)
+            .to(eventsExchange)
+            .with("antifraud.transaction.approved")
+    }
+
+    /**
+     * Queue para eventos de FraudDetected (observabilidade).
+     * Usada pelo DomainEventLogger para logging estruturado.
+     */
+    @Bean
+    fun fraudDetectedQueue(): Queue {
+        return QueueBuilder.durable(FRAUD_DETECTED_QUEUE)
+            .withArgument("x-message-ttl", 86400000) // 24 horas
+            .build()
+    }
+
+    @Bean
+    fun fraudDetectedBinding(
+        fraudDetectedQueue: Queue,
+        eventsExchange: TopicExchange
+    ): Binding {
+        return BindingBuilder
+            .bind(fraudDetectedQueue)
+            .to(eventsExchange)
+            .with("antifraud.fraud.detected")
+    }
+
+    /**
+     * Queue para eventos de UserSubscriptionUpgraded (observabilidade).
+     * Usada pelo DomainEventLogger para logging estruturado.
+     */
+    @Bean
+    fun userSubscriptionUpgradedQueue(): Queue {
+        return QueueBuilder.durable(USER_SUBSCRIPTION_UPGRADED_QUEUE)
+            .withArgument("x-message-ttl", 86400000) // 24 horas
+            .build()
+    }
+
+    @Bean
+    fun userSubscriptionUpgradedBinding(
+        userSubscriptionUpgradedQueue: Queue,
+        eventsExchange: TopicExchange
+    ): Binding {
+        return BindingBuilder
+            .bind(userSubscriptionUpgradedQueue)
+            .to(eventsExchange)
+            .with("account.subscription.upgraded")
+    }
+
+    /**
+     * Queue para eventos de TransactionValidated (observabilidade).
+     * Usada pelo DomainEventLogger para logging estruturado.
+     */
+    @Bean
+    fun transactionValidatedQueue(): Queue {
+        return QueueBuilder.durable(TRANSACTION_VALIDATED_QUEUE)
+            .withArgument("x-message-ttl", 86400000) // 24 horas
+            .build()
+    }
+
+    @Bean
+    fun transactionValidatedBinding(
+        transactionValidatedQueue: Queue,
+        eventsExchange: TopicExchange
+    ): Binding {
+        return BindingBuilder
+            .bind(transactionValidatedQueue)
+            .to(eventsExchange)
+            .with("antifraud.transaction.validated")
     }
 }
