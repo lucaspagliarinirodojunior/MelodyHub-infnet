@@ -3,6 +3,7 @@ package edu.infnet.melodyhub.infrastructure.web
 import edu.infnet.melodyhub.application.transaction.TransactionService
 import edu.infnet.melodyhub.application.transaction.dto.CreateTransactionRequest
 import edu.infnet.melodyhub.application.transaction.dto.TransactionResponse
+import edu.infnet.melodyhub.domain.transaction.SubscriptionType
 import edu.infnet.melodyhub.domain.transaction.TransactionStatus
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -27,30 +28,29 @@ class TransactionControllerTest {
     private fun createTransactionResponse(
         id: UUID = UUID.randomUUID(),
         userId: UUID = UUID.randomUUID(),
-        amount: BigDecimal = BigDecimal("50.00"),
+        amount: BigDecimal = BigDecimal("9.90"),
         status: TransactionStatus = TransactionStatus.PENDING
     ): TransactionResponse {
         return TransactionResponse(
             id = id,
             userId = userId,
             amount = amount,
-            subscriptionType = "BASIC",
-            cardNumber = "1234",
+            subscriptionType = SubscriptionType.BASIC,
             status = status,
+            fraudReason = null,
             createdAt = LocalDateTime.now(),
-            fraudReason = null
+            updatedAt = LocalDateTime.now()
         )
     }
 
     @Test
     fun `should create transaction successfully`() {
         val userId = UUID.randomUUID()
-        val creditCardId = UUID.randomUUID()
+        val creditCardId = 1L
         val request = CreateTransactionRequest(
             userId = userId,
-            amount = BigDecimal("50.00"),
-            creditCardId = creditCardId,
-            subscriptionType = "BASIC"
+            subscriptionType = SubscriptionType.BASIC,
+            creditCardId = creditCardId
         )
         val response = createTransactionResponse(userId = userId)
 

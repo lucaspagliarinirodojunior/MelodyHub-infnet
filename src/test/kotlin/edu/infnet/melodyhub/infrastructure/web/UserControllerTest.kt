@@ -7,7 +7,6 @@ import edu.infnet.melodyhub.domain.user.UserRole
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.*
 import org.springframework.http.HttpStatus
 import java.util.*
@@ -29,7 +28,14 @@ class UserControllerTest {
         email: String = "test@example.com",
         role: UserRole = UserRole.SEM_PLANO
     ): UserResponse {
-        return UserResponse(id, name, email, role)
+        return UserResponse(
+            id = id,
+            name = name,
+            email = email,
+            role = role,
+            createdAt = java.time.LocalDateTime.now(),
+            updatedAt = java.time.LocalDateTime.now()
+        )
     }
 
     @Test

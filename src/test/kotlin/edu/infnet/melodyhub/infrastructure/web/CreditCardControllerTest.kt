@@ -26,17 +26,19 @@ class CreditCardControllerTest {
     private fun createCreditCardResponse(
         id: Long = 1L,
         userId: UUID = UUID.randomUUID(),
-        cardNumber: String = "4111111111111111",
         status: CreditCardStatus = CreditCardStatus.ACTIVE
     ): CreditCardResponseDTO {
         return CreditCardResponseDTO(
             id = id,
             userId = userId,
-            maskedNumber = "**** **** **** 1111",
+            maskedCardNumber = "**** **** **** 1111",
+            cardHolderName = "Test User",
             brand = "VISA",
             expirationMonth = 12,
             expirationYear = 2025,
-            status = status
+            status = status,
+            isExpired = false,
+            isValid = true
         )
     }
 
@@ -46,6 +48,7 @@ class CreditCardControllerTest {
         val dto = CreateCreditCardDTO(
             userId = userId,
             cardNumber = "4111111111111111",
+            cardHolderName = "Test User",
             cvv = "123",
             expirationMonth = 12,
             expirationYear = 2025
@@ -67,6 +70,7 @@ class CreditCardControllerTest {
         val dto = CreateCreditCardDTO(
             userId = userId,
             cardNumber = "1234567890123456",
+            cardHolderName = "Test User",
             cvv = "123",
             expirationMonth = 12,
             expirationYear = 2025
@@ -86,6 +90,7 @@ class CreditCardControllerTest {
         val dto = CreateCreditCardDTO(
             userId = userId,
             cardNumber = "4111111111111111",
+            cardHolderName = "Test User",
             cvv = "123",
             expirationMonth = 12,
             expirationYear = 2025

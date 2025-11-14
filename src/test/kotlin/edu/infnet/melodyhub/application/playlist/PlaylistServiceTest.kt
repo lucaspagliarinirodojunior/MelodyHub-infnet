@@ -311,7 +311,7 @@ class PlaylistServiceTest {
         playlistService.addMusicToPlaylist(playlistId, userId, request)
 
         verify(playlistMusicRepository).save(argThat {
-            this is PlaylistMusic && this.musicId == musicId && this.position == 0
+            this.musicId == musicId && this.position == 0
         })
     }
 
@@ -416,5 +416,346 @@ class PlaylistServiceTest {
         playlistService.removeFromFavorites(userId, musicId)
 
         verify(playlistMusicRepository).delete(playlistMusic)
+    }
+
+    @Test
+    fun `should throw exception when getting playlist with musics for non-existent playlist`() {
+        val playlistId = UUID.randomUUID()
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(null)
+
+        val exception = assertThrows<NoSuchElementException> {
+            playlistService.getPlaylistWithMusics(playlistId)
+        }
+
+        assertTrue(exception.message!!.contains("não encontrada"))
+    }
+
+    @Test
+    fun `should throw exception when updating playlist for non-existent user`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val playlist = createTestPlaylist(playlistId, userId)
+        val request = UpdatePlaylistRequest(name = "New Name")
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(userId)).thenReturn(null)
+
+        val exception = assertThrows<IllegalArgumentException> {
+            playlistService.updatePlaylist(playlistId, userId, request)
+        }
+
+        assertTrue(exception.message!!.contains("Usuário não encontrado"))
+    }
+
+    @Test
+    fun `should throw exception when user tries to update another user's playlist`() {
+        val playlistId = UUID.randomUUID()
+        val ownerId = UUID.randomUUID()
+        val otherUserId = UUID.randomUUID()
+        val playlist = createTestPlaylist(playlistId, ownerId)
+        val otherUser = createTestUser(otherUserId, UserRole.BASIC)
+        val request = UpdatePlaylistRequest(name = "New Name")
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(otherUserId)).thenReturn(otherUser)
+
+        val exception = assertThrows<IllegalArgumentException> {
+            playlistService.updatePlaylist(playlistId, otherUserId, request)
+        }
+
+        assertTrue(exception.message!!.contains("não tem permissão"))
+    }
+
+    @Test
+    fun `should allow admin to update another user's playlist`() {
+        val playlistId = UUID.randomUUID()
+        val ownerId = UUID.randomUUID()
+        val adminId = UUID.randomUUID()
+        val playlist = createTestPlaylist(playlistId, ownerId)
+        val admin = createTestUser(adminId, UserRole.ADMIN)
+        val request = UpdatePlaylistRequest(name = "New Name")
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(adminId)).thenReturn(admin)
+        whenever(playlistRepository.existsByUserIdAndName(adminId, "New Name")).thenReturn(false)
+        whenever(playlistRepository.save(any())).thenReturn(playlist)
+        whenever(playlistMusicRepository.countByPlaylistId(playlistId)).thenReturn(0)
+
+        playlistService.updatePlaylist(playlistId, adminId, request)
+
+        verify(playlistRepository).save(any())
+    }
+
+    @Test
+    fun `should throw exception when deleting playlist for non-existent user`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val playlist = createTestPlaylist(playlistId, userId)
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(userId)).thenReturn(null)
+
+        val exception = assertThrows<IllegalArgumentException> {
+            playlistService.deletePlaylist(playlistId, userId)
+        }
+
+        assertTrue(exception.message!!.contains("Usuário não encontrado"))
+    }
+
+    @Test
+    fun `should throw exception when user tries to delete another user's playlist`() {
+        val playlistId = UUID.randomUUID()
+        val ownerId = UUID.randomUUID()
+        val otherUserId = UUID.randomUUID()
+        val playlist = createTestPlaylist(playlistId, ownerId)
+        val otherUser = createTestUser(otherUserId, UserRole.BASIC)
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(otherUserId)).thenReturn(otherUser)
+
+        val exception = assertThrows<IllegalArgumentException> {
+            playlistService.deletePlaylist(playlistId, otherUserId)
+        }
+
+        assertTrue(exception.message!!.contains("não tem permissão"))
+    }
+
+    @Test
+    fun `should allow admin to delete another user's playlist`() {
+        val playlistId = UUID.randomUUID()
+        val ownerId = UUID.randomUUID()
+        val adminId = UUID.randomUUID()
+        val playlist = createTestPlaylist(playlistId, ownerId)
+        val admin = createTestUser(adminId, UserRole.ADMIN)
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(adminId)).thenReturn(admin)
+
+        playlistService.deletePlaylist(playlistId, adminId)
+
+        verify(playlistMusicRepository).deleteAllByPlaylistId(playlistId)
+        verify(playlistRepository).delete(playlist)
+    }
+
+    @Test
+    fun `should throw exception when adding music to non-existent playlist`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val request = AddMusicToPlaylistRequest("music123")
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(null)
+
+        val exception = assertThrows<NoSuchElementException> {
+            playlistService.addMusicToPlaylist(playlistId, userId, request)
+        }
+
+        assertTrue(exception.message!!.contains("não encontrada"))
+    }
+
+    @Test
+    fun `should throw exception when adding music for non-existent user`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val playlist = createTestPlaylist(playlistId, userId)
+        val request = AddMusicToPlaylistRequest("music123")
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(userId)).thenReturn(null)
+
+        val exception = assertThrows<IllegalArgumentException> {
+            playlistService.addMusicToPlaylist(playlistId, userId, request)
+        }
+
+        assertTrue(exception.message!!.contains("Usuário não encontrado"))
+    }
+
+    @Test
+    fun `should throw exception when adding non-existent music`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val musicId = "nonexistent"
+        val playlist = createTestPlaylist(playlistId, userId)
+        val user = createTestUser(userId)
+        val request = AddMusicToPlaylistRequest(musicId)
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(userId)).thenReturn(user)
+        whenever(musicRepository.findById(musicId)).thenReturn(Optional.empty())
+
+        val exception = assertThrows<NoSuchElementException> {
+            playlistService.addMusicToPlaylist(playlistId, userId, request)
+        }
+
+        assertTrue(exception.message!!.contains("Música não encontrada"))
+    }
+
+    @Test
+    fun `should throw exception when user tries to add music to another user's playlist`() {
+        val playlistId = UUID.randomUUID()
+        val ownerId = UUID.randomUUID()
+        val otherUserId = UUID.randomUUID()
+        val musicId = "music123"
+        val playlist = createTestPlaylist(playlistId, ownerId)
+        val otherUser = createTestUser(otherUserId, UserRole.BASIC)
+        val request = AddMusicToPlaylistRequest(musicId)
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(otherUserId)).thenReturn(otherUser)
+
+        val exception = assertThrows<IllegalArgumentException> {
+            playlistService.addMusicToPlaylist(playlistId, otherUserId, request)
+        }
+
+        assertTrue(exception.message!!.contains("não tem permissão"))
+    }
+
+    @Test
+    fun `should throw exception when removing music from non-existent playlist`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val musicId = "music123"
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(null)
+
+        val exception = assertThrows<NoSuchElementException> {
+            playlistService.removeMusicFromPlaylist(playlistId, musicId, userId)
+        }
+
+        assertTrue(exception.message!!.contains("não encontrada"))
+    }
+
+    @Test
+    fun `should throw exception when removing music for non-existent user`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val musicId = "music123"
+        val playlist = createTestPlaylist(playlistId, userId)
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(userId)).thenReturn(null)
+
+        val exception = assertThrows<IllegalArgumentException> {
+            playlistService.removeMusicFromPlaylist(playlistId, musicId, userId)
+        }
+
+        assertTrue(exception.message!!.contains("Usuário não encontrado"))
+    }
+
+    @Test
+    fun `should throw exception when removing non-existent music from playlist`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val musicId = "nonexistent"
+        val playlist = createTestPlaylist(playlistId, userId)
+        val user = createTestUser(userId)
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(userId)).thenReturn(user)
+        whenever(playlistMusicRepository.findByPlaylistIdAndMusicId(playlistId, musicId)).thenReturn(null)
+
+        val exception = assertThrows<NoSuchElementException> {
+            playlistService.removeMusicFromPlaylist(playlistId, musicId, userId)
+        }
+
+        assertTrue(exception.message!!.contains("não encontrada na playlist"))
+    }
+
+    @Test
+    fun `should throw exception when reordering music in non-existent playlist`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val musicId = "music123"
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(null)
+
+        val exception = assertThrows<NoSuchElementException> {
+            playlistService.reorderMusic(playlistId, musicId, 0, userId)
+        }
+
+        assertTrue(exception.message!!.contains("não encontrada"))
+    }
+
+    @Test
+    fun `should throw exception when getting favorites for user without favorites playlist`() {
+        val userId = UUID.randomUUID()
+
+        whenever(playlistRepository.findByUserIdAndIsDefault(userId, true)).thenReturn(emptyList())
+
+        val exception = assertThrows<NoSuchElementException> {
+            playlistService.getFavoritesPlaylist(userId)
+        }
+
+        assertTrue(exception.message!!.contains("favoritos não encontrada"))
+    }
+
+    @Test
+    fun `should reorder music successfully`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val musicId = "music123"
+        val playlist = createTestPlaylist(playlistId, userId)
+        val user = createTestUser(userId)
+        val playlistMusic = PlaylistMusic(UUID.randomUUID(), playlistId, musicId, 0)
+        val allMusics = listOf(
+            playlistMusic,
+            PlaylistMusic(UUID.randomUUID(), playlistId, "music2", 1),
+            PlaylistMusic(UUID.randomUUID(), playlistId, "music3", 2)
+        )
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(userId)).thenReturn(user)
+        whenever(playlistMusicRepository.findByPlaylistIdAndMusicId(playlistId, musicId)).thenReturn(playlistMusic)
+        whenever(playlistMusicRepository.findByPlaylistIdOrderByPosition(playlistId)).thenReturn(allMusics)
+
+        playlistService.reorderMusic(playlistId, musicId, 2, userId)
+
+        verify(playlistMusicRepository, atLeastOnce()).save(any())
+    }
+
+    @Test
+    fun `should not reorder when music is already at target position`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val musicId = "music123"
+        val playlist = createTestPlaylist(playlistId, userId)
+        val user = createTestUser(userId)
+        val playlistMusic = PlaylistMusic(UUID.randomUUID(), playlistId, musicId, 1)
+        val allMusics = listOf(
+            PlaylistMusic(UUID.randomUUID(), playlistId, "music1", 0),
+            playlistMusic,
+            PlaylistMusic(UUID.randomUUID(), playlistId, "music3", 2)
+        )
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(userId)).thenReturn(user)
+        whenever(playlistMusicRepository.findByPlaylistIdAndMusicId(playlistId, musicId)).thenReturn(playlistMusic)
+        whenever(playlistMusicRepository.findByPlaylistIdOrderByPosition(playlistId)).thenReturn(allMusics)
+
+        playlistService.reorderMusic(playlistId, musicId, 1, userId)
+
+        verify(playlistMusicRepository, never()).save(any())
+    }
+
+    @Test
+    fun `should throw exception when reordering with invalid position`() {
+        val playlistId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val musicId = "music123"
+        val playlist = createTestPlaylist(playlistId, userId)
+        val user = createTestUser(userId)
+        val playlistMusic = PlaylistMusic(UUID.randomUUID(), playlistId, musicId, 0)
+        val allMusics = listOf(playlistMusic)
+
+        whenever(playlistRepository.findById(playlistId)).thenReturn(playlist)
+        whenever(userRepository.findById(userId)).thenReturn(user)
+        whenever(playlistMusicRepository.findByPlaylistIdAndMusicId(playlistId, musicId)).thenReturn(playlistMusic)
+        whenever(playlistMusicRepository.findByPlaylistIdOrderByPosition(playlistId)).thenReturn(allMusics)
+
+        val exception = assertThrows<IllegalArgumentException> {
+            playlistService.reorderMusic(playlistId, musicId, 10, userId)
+        }
+
+        assertTrue(exception.message!!.contains("Posição inválida"))
     }
 }

@@ -28,7 +28,7 @@ class AuthControllerTest {
         val request = LoginRequest("test@example.com", "senha123")
         val token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         val userId = UUID.randomUUID()
-        val response = LoginResponse(token, userId, "Test User", UserRole.BASIC)
+        val response = LoginResponse(userId, "Test User", "test@example.com", UserRole.BASIC, token)
 
         whenever(authService.login(request)).thenReturn(response)
 

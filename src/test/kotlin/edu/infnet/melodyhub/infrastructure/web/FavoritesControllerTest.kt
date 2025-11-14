@@ -29,9 +29,10 @@ class FavoritesControllerTest {
             name = "Favoritos",
             description = "Músicas favoritas",
             userId = userId,
-            isPrivate = false,
             isDefault = true,
-            musics = emptyList()
+            musics = emptyList(),
+            createdAt = java.time.LocalDateTime.now(),
+            updatedAt = java.time.LocalDateTime.now()
         )
     }
 

@@ -31,9 +31,10 @@ class PlaylistControllerTest {
             name = name,
             description = "Test playlist",
             userId = userId,
-            isPrivate = false,
             isDefault = false,
-            musicCount = musicCount
+            musicCount = musicCount,
+            createdAt = java.time.LocalDateTime.now(),
+            updatedAt = java.time.LocalDateTime.now()
         )
     }
 
@@ -162,7 +163,7 @@ class PlaylistControllerTest {
 
         val result = playlistController.addMusicToPlaylist(playlistId, userId, request)
 
-        assertEquals(HttpStatus.NO_CONTENT, result.statusCode)
+        assertEquals(HttpStatus.CREATED, result.statusCode)
     }
 
     @Test
@@ -173,7 +174,7 @@ class PlaylistControllerTest {
 
         doNothing().whenever(playlistService).removeMusicFromPlaylist(playlistId, musicId, userId)
 
-        val result = playlistController.removeMusicFromPlaylist(playlistId, userId, musicId)
+        val result = playlistController.removeMusicFromPlaylist(playlistId, musicId, userId)
 
         assertEquals(HttpStatus.NO_CONTENT, result.statusCode)
     }
